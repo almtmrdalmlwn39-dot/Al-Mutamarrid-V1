@@ -1,5 +1,5 @@
 from telethon import events
-from . import client
+from __main__ import client
 
 # 1. أمر استخراج المعلومات (بالرد)
 @client.on(events.NewMessage(pattern=r'\.معلومات', outgoing=True))
