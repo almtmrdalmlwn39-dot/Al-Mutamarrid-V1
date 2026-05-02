@@ -1,4 +1,4 @@
 Telethon
-python-magic
-requests
-
+​python-magic
+​requests
+​pytz
