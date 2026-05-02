@@ -2,6 +2,7 @@ from telethon import events, functions, types
 import asyncio
 import os
 from datetime import datetime
+from __main__ import client # تصحيح 1: ربط الملف بمحرك البوت
 
 # --- إعدادات الحماية والبيانات ---
 approved_users = set()
@@ -9,31 +10,36 @@ muted_users = set()
 pm_warner = {}
 PM_MAX_REPS = 3
 
-# --- 1. ميزة ساعة النبذة (تحديث الوقت مع نبذتك الخاصة) ---
+# --- 1. ميزة ساعة النبذة (تحديث الوقت تلقائياً) ---
 async def bio_time_updater():
     while True:
-        # وقت اليمن الآن بتنسيق 12 ساعة
-        current_time = datetime.now().strftime('%I:%M %p')
-        # النبذة التي حددتها أنت مع إضافة الساعة في الأخير
-        my_bio = f"نبذة تعریفیه شخص مغرم بنفسه ولایتنازل لـ خلق الله أبداً {current_time}"
         try:
+            # وقت اليمن الآن بتنسيق 12 ساعة
+            current_time = datetime.now().strftime('%I:%M %p')
+            # النبذة التي حددتها أنت
+            my_bio = f"نبذة تعریفیه شخص مغرم بنفسه ولایتنازل لـ خلق الله أبداً {current_time}"
             await client(functions.account.UpdateProfileRequest(about=my_bio))
         except:
             pass
         await asyncio.sleep(60) # تحديث كل دقيقة
 
+# تصحيح 2: تشغيل دالة الساعة في الخلفية فور تشغيل البوت
+client.loop.create_task(bio_time_updater())
+
 # --- 2. حماية الخاص (الرد الهيبة بصورتك الشخصية) ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def mutamarrid_guard(event):
     sender = await event.get_sender()
-    if sender.id in approved_users or sender.contact or sender.bot or sender.id == (await client.get_me()).id:
+    me = await client.get_me()
+    
+    # استثناءات (أنت، المسموح لهم، جهات الاتصال، البوتات)
+    if not sender or sender.id in approved_users or sender.contact or sender.bot or sender.id == me.id:
         return
     
     if sender.id not in pm_warner: pm_warner[sender.id] = 1
     else: pm_warner[sender.id] += 1
     
     if pm_warner[sender.id] <= PM_MAX_REPS:
-        me = await client.get_me()
         my_photo = await client.download_profile_photo(me.id)
         caption = f"""**‹ مـمـلـكـة الـمـتـمـرد الـتـقـنـيـة ⚡ ›**
 **— — — — — — — — — —**
@@ -62,16 +68,19 @@ async def check_mutamarrid(event):
     photo = await client.download_profile_photo(me.id)
     await client.send_file(event.chat_id, photo, caption=f"**‹ نـظـام الـمـتـمـرد يـعـمـل بـكـفـاءة ⚡ ›**\n**• الـسـرعـة:** `{ms}ms` \n**• الـحـالـة:** مـتـصـل 🦾")
     await event.delete()
+    if photo and os.path.exists(photo): os.remove(photo)
 
 @client.on(events.NewMessage(pattern=r"\.ايدي", outgoing=True))
 async def get_id(event):
-    user = await event.get_reply_message() if event.is_reply else await event.get_me()
-    photo = await client.download_profile_photo(user.sender_id if event.is_reply else user.id)
-    caption = f"**• الأيـدي:** `{user.sender_id if event.is_reply else user.id}`\n**• الإسـم:** {user.first_name}"
+    user_msg = await event.get_reply_message()
+    target = user_msg.sender if user_msg else await client.get_me()
+    photo = await client.download_profile_photo(target.id)
+    caption = f"**• الأيـدي:** `{target.id}`\n**• الإسـم:** {target.first_name}"
     await client.send_file(event.chat_id, photo, caption=caption)
     await event.delete()
+    if photo and os.path.exists(photo): os.remove(photo)
 
-# --- 4. أوامر الإدارة (سماح، رفض، كتم، تفليش) ---
+# --- 4. أوامر الإدارة (سماح، كتم، تفليش) ---
 @client.on(events.NewMessage(pattern=r"\.سماح", outgoing=True))
 async def allow(event):
     if event.is_reply:
