@@ -4,6 +4,22 @@ import importlib.util
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from config import API_ID, API_HASH, SESSION
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Al-Mutamarrid is Active!')
+
+def run_health_check():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
+
+# تشغيل الخادم في الخلفية لإرضاء Render
+threading.Thread(target=run_health_check, daemon=True).start()
 
 # تشغيل العميل باستخدام الجلسة المستخرجة
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
