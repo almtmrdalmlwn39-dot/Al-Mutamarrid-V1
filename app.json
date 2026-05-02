@@ -1,0 +1,11 @@
+{
+  "name": "سورس المتمرد التقني",
+  "description": "أقوى سورس تليجرام عربي مطور بواسطة المتمرد.",
+  "logo": "https://telegra.ph/file/0c99a5e4d2a13f0a1c6a2.jpg",
+  "repository": "https://github.com/YourUsername/RebelKey",
+  "env": {
+    "API_ID": { "description": "احصل عليه من my.telegram.org", "value": "" },
+    "API_HASH": { "description": "احصل عليه من my.telegram.org", "value": "" },
+    "SESSION": { "description": "كود الجلسة الذي استخرجناه بـ session.py", "value": "" }
+  }
+}

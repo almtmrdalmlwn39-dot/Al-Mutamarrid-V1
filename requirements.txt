@@ -1,7 +1,3 @@
-pyTelegramBotAPI
-telethon
-pytz
-requests
-Pillow
-python-dotenv
-aiohttp
+Telethon
+asyncio
+
