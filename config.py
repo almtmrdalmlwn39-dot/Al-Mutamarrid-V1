@@ -9,4 +9,6 @@ SUDO_USERS = [6467728995]
 OWNER_NAME = "المتمرد"
 OWNER_USERNAME = "Vi_ti0"
 BOT_TOKEN = "8687352199:AAF2STdX2zzOT_cjufv1SZHTuPrwtlzAGwo"
+import os
+SESSION = os.environ.get("SESSION")
 
