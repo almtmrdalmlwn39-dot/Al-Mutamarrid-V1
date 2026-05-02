@@ -1,3 +1,4 @@
 Telethon
-asyncio
+python-magic
+requests
 
