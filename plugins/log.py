@@ -1,4 +1,5 @@
 from telethon import events, functions, types
+from __main__ import client
 import os
 
 # --- كود إنشاء جروب التخزين الفخم تلقائياً ---
