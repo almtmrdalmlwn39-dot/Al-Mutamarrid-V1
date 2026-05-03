@@ -3,3 +3,4 @@ python-magic
 requests
 pytz
 cryptg
+flask
