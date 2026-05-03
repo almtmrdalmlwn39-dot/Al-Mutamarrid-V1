@@ -1,5 +1,4 @@
 from telethon import events, functions, types
-from __main__ import client
 import os
 
 # --- كود إنشاء جروب التخزين الفخم تلقائياً ---
@@ -7,16 +6,16 @@ import os
 # متغير لتخزين أيدي الجروب برمجياً لكي لا تضطر لكتابته يدوياً
 LOG_GROUP_ID = None 
 
-@client.on(events.NewMessage(pattern=r"\.انشاء تخزين", outgoing=True))
+@events.register(events.NewMessage(pattern=r"\.انشاء تخزين", outgoing=True))
 async def create_fakhama_log(event):
     global LOG_GROUP_ID
     await event.edit("**جـاري تـأسـيـس مـمـلـكـة الـتـخـزيـن الـفـخـمـة... 🔥**")
     
     try:
-        me = await client.get_me()
+        me = await event.client.get_me()
         
         # 1. إنشاء الجروب
-        result = await client(functions.channels.CreateChannelRequest(
+        result = await event.client(functions.channels.CreateChannelRequest(
             title="سجل رسائل المتمرد التقني 📥",
             about="تخزين خاص ومشفر لرسائل المطور [المتمرد].",
             megagroup=True
@@ -29,18 +28,18 @@ async def create_fakhama_log(event):
         # 2. ميزة الفخامة: تعيين صورتك الشخصية كصورة للجروب
         await event.edit("**جـاري وضـع لـمـسـة الـفـخـامة عـلـى الـجـروب... ✨**")
         
-        photos = await client.get_profile_photos(me.id)
+        photos = await event.client.get_profile_photos(me.id)
         if photos:
-            photo_path = await client.download_media(photos[0])
+            photo_path = await event.client.download_media(photos[0])
             if photo_path and os.path.exists(photo_path):
-                await client(functions.channels.EditPhotoRequest(
+                await event.client(functions.channels.EditPhotoRequest(
                     channel=LOG_GROUP_ID,
-                    photo=await client.upload_file(photo_path)
+                    photo=await event.client.upload_file(photo_path)
                 ))
                 os.remove(photo_path)
 
         # 3. تثبيت رسالة ترحيبية فخمة
-        await client.send_message(LOG_GROUP_ID, f"""**‹ تـم تـأسـيـس مـمـلـكـة الـتـخـزيـن بـنـجـاح ✅ ›**
+        await event.client.send_message(LOG_GROUP_ID, f"""**‹ تـم تـأسـيـس مـمـلـكـة الـتـخـزيـن بـنـجـاح ✅ ›**
 **— — — — — — — — — —**
 **• الـمـطـور:** [{me.first_name}](tg://user?id={me.id})
 **• الـنـظـام:** المتمرد التقني (V1)
@@ -54,7 +53,7 @@ async def create_fakhama_log(event):
         await event.edit(f"**حدث خطأ غير فخم أثناء الإنشاء:** {e}")
 
 # --- دالة تحويل الرسائل للجروب الذي تم إنشاؤه ---
-@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+@events.register(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def auto_log_messages(event):
     global LOG_GROUP_ID
     
@@ -62,10 +61,10 @@ async def auto_log_messages(event):
         return
 
     sender = await event.get_sender()
-    me = await client.get_me()
+    me = await event.client.get_me()
     
     # لا تخزن رسائلك أنت أو البوتات
-    if sender.bot or sender.id == me.id:
+    if not sender or sender.bot or sender.id == me.id:
         return
 
     first_name = sender.first_name
@@ -73,13 +72,12 @@ async def auto_log_messages(event):
     
     log_caption = f"""**‹ رسـالـة جـديـدة واصـلـة 📥 ›**
 **— — — — — — — — — —**
-**• مـن:** [{first_name}](tg://user?id={user_id})
-**• الأيـدي:** `{user_id}`
+**• مـن: [{first_name}](tg://user?id={user_id})**
+**• الأيـدي: `{user_id}`**
 **— — — — — — — — — —**"""
 
     try:
-        # إرسال بيانات الشخص أولاً ثم توجيه الرسالة
-        await client.send_message(LOG_GROUP_ID, log_caption)
+        await event.client.send_message(LOG_GROUP_ID, log_caption)
         await event.forward_to(LOG_GROUP_ID)
     except:
         pass
