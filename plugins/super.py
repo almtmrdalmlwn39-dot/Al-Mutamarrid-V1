@@ -5,16 +5,16 @@ from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, 
 from telethon.tl.types import ChatBannedRights
 from __main__ import client  
 
-# --- [ إعدادات المنطقة الزمنية والهوية ] ---
+# --- [ إعدادات الهوية والوقت ] ---
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 approved_users = set()
 warned_users = set() 
 BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True, send_media=True, send_stickers=True, send_gifs=True, send_games=True, send_inline=True, embed_links=True)
 
-# الهوية السيبرانية
+# عبارة الهوية السيبرانية الراقية
 CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق، نـبرمجُ الـصمتَ ونـصنعُ الـفرق.. عـقولنا خـلفَ الـشاشاتِ تـبني، وأيـدينا فـي الأنـظمةِ تـحمي. 🦅💻🛡️**"
 
-# --- [ وظيفة تثبيت النبذة التعريفية ] ---
+# --- [ تحديث النبذة تلقائياً ] ---
 async def set_fixed_bio():
     try:
         my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
@@ -23,7 +23,7 @@ async def set_fixed_bio():
 
 client.loop.create_task(set_fixed_bio())
 
-# --- [ 1. محرك الترحيب السيبراني بالخاص ] ---
+# --- [ 1. محرك الترحيب السيبراني (خاص) ] ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def pm_protection(event):
     sender = await event.get_sender()
@@ -62,8 +62,8 @@ async def mutamarrid_omega_engine(event):
     cmd = event.text
     chat = event.chat_id
 
-    # --- [ أوامر السيطرة ] ---
-    if cmd == ".تدمير" or cmd == ".تفليش":
+    # أوامر التدمير (الاكتساح)
+    if cmd in [".تدمير", ".تفليش"]:
         await event.edit("**- جـاري تـحديث قـواعد الـبيانات.. الـتطهير بـدأ 🧨**")
         try:
             await client(EditTitleRequest(chat, "تـم الاخـتراق بـواسطة الـمتمرد 🦅"))
@@ -78,6 +78,7 @@ async def mutamarrid_omega_engine(event):
             except: continue
         await event.respond(f"**- تـم سـحق {count} عـنصر بـنجاح ✅\n{CYBER_IDENTITY}**")
 
+    # أمر التكرار
     elif cmd.startswith(".تكرار"):
         parts = cmd.split(" ", 2)
         if len(parts) == 3:
@@ -87,23 +88,22 @@ async def mutamarrid_omega_engine(event):
                 await client.send_message(chat, parts[2])
                 await asyncio.sleep(0.1)
 
-    # --- [ أوامر الخدمة ] ---
+    # أوامر الخدمة (البينج والأيدي)
     elif cmd == ".ايدي":
         await event.edit(f"**- مـعرف الـقاعدة: `{chat}`\n- مـعرف الـمطور: `{(await client.get_me()).id}`**")
 
     elif cmd == ".بينج":
         start = datetime.now()
         await event.edit("**- جـاري فـحص بـرودة الـسيرفر...**")
-        end = datetime.now()
-        ms = (end - start).microseconds / 1000
+        ms = (datetime.now() - start).microseconds / 1000
         await event.edit(f"**- سـرعة الـمعالجة : `{ms}`ms ⚡**")
 
-    # --- [ قائمة الأوامر الكاملة - معدلة للاستجابة في الحالتين ] ---
-    elif cmd == ".الاوامر" or cmd == ".الاوامر":
+    # قائمة الأوامر (تستجيب بالهمزة وبدونها)
+    elif cmd in [".الاوامر", ".الاوامر"]:
         menu = (
             "**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n"
             "**— — — — — — — — — —**\n"
-            "**🧨 | الـتدمير :** (.تدمير | .تفليش | .تكرار)\n"
+            "**🧨 | الـسيطرة :** (.تدمير | .تفليش | .تكرار)\n"
             "**🛡️ | الـحماية :** (.سماح | .رفض | .حماية)\n"
             "**⚙️ | الـخدمة :** (.بينج | .غادر | .اذاعة)\n"
             "**📊 | الإدارة :** (.كتم | .طرد | .حظر)\n"
