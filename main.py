@@ -1,72 +1,43 @@
 import os
 import glob
-import importlib.util
-import asyncio
+import importlib
 from telethon import TelegramClient
-from telethon.sessions import StringSession
-from config import API_ID, API_HASH, SESSION
-
-# --- إضافة نظام Flask للبقاء متصلاً 24 ساعة ---
 from flask import Flask
 from threading import Thread
 
+# --- إعدادات السيرفر لإبقاء البوت حياً ---
 app = Flask('')
-
 @app.route('/')
-def home():
-    return "سورس المتمرد شغال بنجاح ✅"
+def home(): return "I am alive"
 
-def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+def run(): app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-keep_alive()
-# ------------------------------------------
+# --- إعدادات الحساب (تأكد أنك وضعت بياناتك في config.py) ---
+from config import API_ID, API_HASH, SESSION
 
-client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
+client = TelegramClient(SESSION, API_ID, API_HASH)
 
+# --- دالة تحميل الملحقات (هنا السر!) ---
 def load_plugins():
     path = "plugins/*.py"
     files = glob.glob(path)
     for name in files:
-        try:
-            module_name = os.path.basename(name).replace(".py", "")
-            spec = importlib.util.spec_from_file_location(module_name, name)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            
-            # --- التعديل السحري هنا ---
-            # هذا الجزء يبحث عن الأوامر داخل الملف ويربطها بالحساب
-            for attr in dir(module):
-                value = getattr(module, attr)
-                if hasattr(value, "callback"):
-                    client.add_event_handler(value)
-            # ------------------------
-            
-            print(f"✅ تم تحميل الموديول: {module_name}")
-        except Exception as e:
-            print(f"❌ فشل تحميل {os.path.basename(name)} بسبب: {e}")
+        with open(name) as f:
+            path1 = name.replace(".py", "").replace("/", ".").replace("\\", ".")
+            importlib.import_module(path1)
+            print(f"✅ تم تحميل الموديول: {path1}")
 
-async def main():
-    print("🚀 جاري تشغيل سورس المتمرد التقني...")
-    
+async def start_bot():
+    keep_alive()
+    load_plugins() # تشغيل الأوامر
     await client.start()
-    load_plugins()
-
-    # --- تشغيل ساعة النبذة تلقائياً من ملف super.py ---
-    try:
-        from plugins.super import bio_time_updater
-        client.loop.create_task(bio_time_updater(client))
-        print("🕒 تم بدء تشغيل ساعة النبذة...")
-    except:
-        pass
-
-    print("🛡️ السورس شغال الآن! جرب أرسل .اوامري")
+    print("🛡️ سورس المتمرد شغال الآن.. جرب اكتب .اوامري")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    client.loop.run_until_complete(main())
+    import asyncio
+    asyncio.run(start_bot())
