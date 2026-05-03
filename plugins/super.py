@@ -28,18 +28,18 @@ async def mutamarrid_war_engine(event):
     cmd = event.text
     chat = event.chat_id
 
-    # 1. تفليش القروب (طرد جماعي) - يتطلب صلاحية مشرف
+    # 1. تفليش القروب (طرد جماعي)
     if cmd == ".تفليش":
         await event.edit("**🔥 جاري تـصـفـيـة الـقـروب بـالـكـامـل...**")
         async for user in event.client.iter_participants(chat):
             try:
                 if not user.admin and not user.is_self:
                     await event.client.kick_participant(chat, user.id)
-                    await asyncio.sleep(0.1) # سرعة الطرد لعدم حظر الحساب
+                    await asyncio.sleep(0.1)
             except: continue
         await event.respond("**✅ تم تفليش القروب بنجاح بواسطة المتمرد!**")
 
-    # 2. تكرار (سبام رسائل) - مثال: .تكرار 50 متمرد
+    # 2. تكرار (سبام رسائل)
     elif cmd.startswith(".تكرار"):
         try:
             args = cmd.split(" ", 2)
@@ -48,10 +48,10 @@ async def mutamarrid_war_engine(event):
             await event.delete()
             for i in range(count):
                 await event.client.send_message(chat, message)
-                await asyncio.sleep(0.05) # سرعة السبام
+                await asyncio.sleep(0.05)
         except: await event.edit("**⚠️ استخدم: `.تكرار [العدد] [النص]`**")
 
-    # 3. أمر الايدي (ID) الاحترافي بالصورة
+    # 3. أمر الايدي (ID) الاحترافي
     elif cmd == ".ايدي" or cmd == "ايدي":
         target = await event.get_reply_message() if event.is_reply else await event.client.get_me()
         user = await event.client.get_entity(target.sender_id if event.is_reply else target.id)
@@ -103,22 +103,4 @@ async def mutamarrid_war_engine(event):
         )
         await event.edit(menu)
 
-# --- [ 3. حامي الخاص الذكي ] ---
-@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
-async def mutamarrid_guard(event):
-    if not security_enabled: return
-    sender = await event.get_sender()
-    me = await event.client.get_me()
-    if not sender or sender.bot or sender.id == me.id or sender.id in approved_users: return
-    
-    if sender.id not in pm_warner: pm_warner[sender.id] = 1
-    else: pm_warner[sender.id] += 1
-    
-    if pm_warner[sender.id] <= PM_MAX_REPS:
-        photo = await event.client.download_profile_photo(me.id)
-        caption = f"**‹ مـمـلـكـة الـمـتـمـرد الـتـقـنـيـة ⚡ ›**\n**التحذير: ({pm_warner[sender.id]}/{PM_MAX_REPS})**\n**الخاص محمي.. انتظر السماح!**"
-        await event.client.send_file(event.chat_id, photo, caption=caption)
-    else:
-        await event.client(functions.contacts.BlockRequest(id=sender.id))
-
-print("🔥 سـورس الـمـتـمـرد الـمـرعـب جـاهـز لـلـقـتـال!")
+print("🔥 أوامر المتمرد جاهزة.. تم تعطيل الحماية القديمة لتفعيل الأزرار!")
