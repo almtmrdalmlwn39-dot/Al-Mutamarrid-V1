@@ -5,20 +5,35 @@ from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
 from telethon.tl.types import ChatBannedRights
 from __main__ import client  
 
-# --- [ إعدادات المتمرد الأساسية ] ---
+# --- [ إعدادات المتمرد ] ---
 approved_users = set()
-BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True)
+warned_users = set() # لمنع التكرار
+BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True, send_media=True, send_stickers=True, send_gifs=True, send_games=True, send_inline=True, embed_links=True)
 
-# --- [ 1. محرك الحماية والتنبيهات ] ---
+# --- [ 1. محرك الحماية - رد مرة واحدة فقط بصورة بروفايلك ] ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def pm_protection(event):
     sender = await event.get_sender()
-    if sender.bot or sender.contact or event.sender_id in approved_users or event.sender_id == (await client.get_me()).id:
+    if not sender or sender.bot or sender.contact or event.sender_id in approved_users or event.sender_id in warned_users:
         return
-    warn_text = f"**- عذراً يا {sender.first_name} 🛡️\n- نظام حماية المتمرد مفعل حالياً.\n- انتظر السماح لك.**"
-    await event.reply(warn_text)
+    if event.sender_id == (await client.get_me()).id:
+        return
 
-# --- [ 2. المحرك الملكي الشامل (جميع الأوامر) ] ---
+    warn_text = f"**- عذراً يا {sender.first_name} 🛡️\n- نظام حماية المتمرد مفعل حالياً.\n- المطور مشغول، سيتم الرد عليك لاحقاً.**"
+    
+    try:
+        me = await client.get_me()
+        photo = await client.download_profile_photo(me.id)
+        if photo:
+            await client.send_file(event.chat_id, photo, caption=warn_text)
+        else:
+            await event.reply(warn_text)
+        warned_users.add(event.sender_id)
+    except:
+        await event.reply(warn_text)
+        warned_users.add(event.sender_id)
+
+# --- [ 2. المحرك الملكي الشامل ] ---
 @client.on(events.NewMessage(outgoing=True))
 async def mutamarrid_omega_engine(event):
     cmd = event.text
@@ -28,19 +43,26 @@ async def mutamarrid_omega_engine(event):
     if cmd == ".سماح" and event.is_reply:
         reply = await event.get_reply_message()
         approved_users.add(reply.sender_id)
-        await event.edit("**- تم السماح له ✅**")
+        await event.edit("**- تم السماح له بالمراسلة ✅**")
+    
     elif cmd == ".رفض" and event.is_reply:
         reply = await event.get_reply_message()
-        await client(functions.contacts.BlockRequest(id=reply.sender_id))
-        await event.edit("**- تم الحظر 🚫**")
+        from telethon.tl.functions.contacts import BlockRequest
+        await client(BlockRequest(id=reply.sender_id))
+        await event.edit("**- تم سحق المتطفل وحظره 🚫**")
 
-    # --- قسم التدمير ---
-    elif cmd == ".تدمير":
-        await event.edit("**- جاري التدمير الملكي... 🧨**")
+    # --- قسم التفليش (تمت إضافة الكود القوي هنا) ---
+    elif cmd == ".تدمير" or cmd == ".تفليش":
+        await event.edit("**- جـاري الاكتساح الشامل.. المتمرد في الميدان 🧨**")
+        count = 0
         async for user in client.iter_participants(chat):
-            try: await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
+            if user.is_self or user.admin_rights: # يتخطى نفسك والمشرفين عشان ما يوقف
+                continue
+            try:
+                await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
+                count += 1
             except: continue
-        await event.respond("**- انتهى الاكتساح بنجاح ✅**")
+        await event.respond(f"**- تم تنظيف المجموعة من {count} ضحية ✅\n- المتمرد التقني مر من هنا 🦅**")
     
     elif cmd.startswith(".تكرار"):
         parts = cmd.split(" ", 2)
@@ -50,42 +72,30 @@ async def mutamarrid_omega_engine(event):
                 await client.send_message(chat, parts[2])
                 await asyncio.sleep(0.2)
 
-    # --- قسم الإدارة ---
+    # --- قسم الإدارة والتسلية ---
     elif cmd == ".حظر" and event.is_reply:
         reply = await event.get_reply_message()
         await client(EditBannedRequest(chat, reply.sender_id, BANNED_RIGHTS))
-        await event.edit("**- تم حظره من المجموعة 🚷**")
-    elif cmd == ".طرد" and event.is_reply:
-        reply = await event.get_reply_message()
-        await client.kick_participant(chat, reply.sender_id)
-        await event.edit("**- تم طرده بنجاح 👋**")
-
-    # --- قسم التسلية والخدمة ---
+        await event.edit("**- تم الحظر من المجموعة بنجاح 🚷**")
+    
     elif cmd == ".بينج":
         start = datetime.now()
-        await event.edit("**جاري الفحص...**")
+        await event.edit("**جاري فحص السرعة...**")
         end = datetime.now()
         await event.edit(f"**- سرعة المتمرد : `{(end - start).microseconds / 1000}`ms ⚡**")
-    elif cmd == ".كشف الكذب":
-        res = random.choice(["صادق ✅", "كاذب ❌", "نصاب كبير 🤡"])
-        await event.edit(f"**- النتيجة : {res}**")
-    elif cmd == ".غادر":
-        await event.edit("**- وداعاً، المتمرد يغادر... 👋**")
-        await client(functions.channels.LeaveChannelRequest(chat))
 
-    # --- قائمة الأوامر (التي طلبتها بالضبط) ---
+    # --- قائمة الأوامر ---
     elif cmd == ".الاوامر":
         menu = (
             "**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n"
             "**— — — — — — — — — —**\n"
-            "**🛡️ | الـحماية :** (.سماح | .رفض | .حماية)\n"
+            "**🛡️ | الـحماية :** (.سماح | .رفض)\n"
             "**🧨 | الـتدمير :** (.تدمير | .تفليش | .تكرار)\n"
-            "**⚙️ | الـخدمة :** (.تصفية | .اذاعة | .غادر)\n"
-            "**🔍 | الـفحص :** (.بينج | .ايدي | .فحص | .الرابط)\n"
+            "**⚙️ | الـخدمة :** (.بينج | .اذاعة | .غادر)\n"
+            "**🔍 | الـفحص :** (.ايدي | .فحص | .الرابط)\n"
             "**🎮 | الـتسلية :** (.نسبة الحب | .كشف الكذب)\n"
-            "**📂 | الـتخزين :** (.انشاء تخزين | .تخزين)\n"
             "**📊 | الإدارة :** (.كتم | .طرد | .حظر)\n"
             "**— — — — — — — — — —**\n"
-            "**- كـل هـذه الـقوة بـين يـديك الآن.. الـمتمرد.**"
+            "**- نـحن لا نـهزم.. الـمتمرد الـتقني 🇾🇪**"
         )
         await event.edit(menu)
