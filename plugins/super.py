@@ -3,6 +3,7 @@ import os
 import pytz
 from datetime import datetime
 from telethon import events, functions, types, Button
+from __main__ import client  # استدعاء الكلاينت الرئيسي للتشغيل
 
 # --- إعدادات الحماية والبيانات ---
 approved_users = set()
@@ -12,19 +13,24 @@ PM_MAX_REPS = 3
 security_enabled = True 
 
 # --- 1. ميزة ساعة النبذة (بتوقيت اليمن) ---
-async def bio_time_updater(client):
+async def bio_time_updater():
     while True:
         try:
             tz = pytz.timezone('Asia/Aden')
             now = datetime.now(tz)
             current_time = now.strftime('%I:%M %p')
+            # النبذة الخاصة بك مع الوقت
             my_bio = f"نبذة تعریفیه شخص مغرم بنفسه ولایتنازل لـ خلق الله أبداً {current_time}"
             await client(functions.account.UpdateProfileRequest(about=my_bio))
-        except: pass
+        except Exception as e:
+            print(f"Error in bio: {e}")
         await asyncio.sleep(60)
 
+# تشغيل الساعة تلقائياً في الخلفية
+client.loop.create_task(bio_time_updater())
+
 # --- 2. حماية الخاص الشاملة بالأزرار الشفافة ---
-@events.register(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def mutamarrid_guard(event):
     global security_enabled
     if not security_enabled: return
@@ -32,12 +38,12 @@ async def mutamarrid_guard(event):
     sender = await event.get_sender()
     me = await event.client.get_me()
     
-    # استثناء نفسك والبوتات لضمان وصول الرد للجميع
-    if not sender or sender.bot or sender.id == me.id:
+    # استثناء نفسك والبوتات والمسموح لهم سابقاً
+    if not sender or sender.bot or sender.id == me.id or sender.id in approved_users:
         return
 
-    if sender.id in muted_users or sender.id in approved_users:
-        return
+    if sender.id in muted_users:
+        return await event.delete()
     
     if sender.id not in pm_warner: pm_warner[sender.id] = 1
     else: pm_warner[sender.id] += 1
@@ -45,7 +51,6 @@ async def mutamarrid_guard(event):
     if pm_warner[sender.id] <= PM_MAX_REPS:
         photo = await event.client.download_profile_photo(me.id)
         
-        # تنسيق النص لضمان عدم التبعثر
         caption = (
             "**‹ مـمـلـكـة الـمـتـمـرد الـتـقـنـيـة ⚡ ›**\n"
             "**— — — — — — — — — —**\n"
@@ -57,7 +62,6 @@ async def mutamarrid_guard(event):
             "**‹ نـحـن لا نـنـتـظـر الـفـرص.. نـحـن نـصـنـعـهـا ›**"
         )
         
-        # إضافة الأزرار الشفافة
         buttons = [
             [Button.url("• طـلـب مـسـاعـدة •", f"tg://user?id={me.id}")],
             [Button.url("• مـراسـلـة الـمـطـور •", f"tg://user?id={me.id}")]
@@ -70,7 +74,7 @@ async def mutamarrid_guard(event):
         await event.client(functions.contacts.BlockRequest(id=sender.id))
 
 # --- 3. أوامر الإدارة ---
-@events.register(events.NewMessage(pattern=r"\.(سماح|كتم)", outgoing=True))
+@client.on(events.NewMessage(pattern=r"\.(سماح|كتم)", outgoing=True))
 async def admin_cmds(event):
     if not event.is_reply: return await event.edit("**⚠️ رد على رسالة الشخص!**")
     reply = await event.get_reply_message()
@@ -81,3 +85,8 @@ async def admin_cmds(event):
     elif ".كتم" in event.text:
         muted_users.add(sid)
         await event.edit("**تـم كـتـم الـمـسـتـخـدم 🤐**")
+
+# أمر الفحص
+@client.on(events.NewMessage(pattern=r"\.فحص", outgoing=True))
+async def ping_cmd(event):
+    await event.edit("**⚡ سـورس الـمـتـمـرد يـعـمـل بـنـجـاح!**")
