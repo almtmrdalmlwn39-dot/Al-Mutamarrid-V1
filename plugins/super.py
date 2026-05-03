@@ -26,7 +26,7 @@ async def bio_time_updater():
 
 client.loop.create_task(bio_time_updater())
 
-# --- 2. حماية الخاص ---
+# --- 2. حماية الخاص الذكية ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def mutamarrid_guard(event):
     global security_enabled
@@ -43,8 +43,10 @@ async def mutamarrid_guard(event):
         photo = await event.client.download_profile_photo(me.id)
         caption = (
             "**‹ مـمـلـكـة الـمـتـمـرد الـتـقـنـيـة ⚡ ›**\n"
+            "**— — — — — — — — — —**\n"
             f"**• الـتـحـذيـر : ({pm_warner[sender.id]} مـن {PM_MAX_REPS})**\n"
-            "**• حـدد سـبـب تـواجـدك بـالأزرار :**"
+            "**• حـدد سـبـب تـواجـدك بـالأزرار :**\n"
+            "**— — — — — — — — — —**\n"
         )
         buttons = [[Button.url("• مـراسـلـة الـمـطـور •", f"tg://user?id={me.id}")]]
         await event.client.send_file(event.chat_id, photo, caption=caption, buttons=buttons)
@@ -52,22 +54,40 @@ async def mutamarrid_guard(event):
     else:
         await event.client(functions.contacts.BlockRequest(id=sender.id))
 
-# --- 3. أوامر الإدارة (تم تعديل الاستجابة لتكون فورية) ---
-@client.on(events.NewMessage(pattern=r"\.(سماح|كتم)", outgoing=True))
+# --- 3. أوامر الإدارة الشاملة (سماح، كتم، رفض) ---
+@client.on(events.NewMessage(pattern=r"\.(سماح|كتم|رفض)", outgoing=True))
 async def admin_cmds(event):
     try:
-        if not event.is_reply: return await event.edit("**⚠️ رد على رسالة الشخص!**")
+        if not event.is_reply: 
+            return await event.edit("**⚠️ يجب الرد على رسالة المستخدم لتنفيذ الأمر!**")
+        
         reply = await event.get_reply_message()
         sid = reply.sender_id
+        
         if ".سماح" in event.text:
             approved_users.add(sid)
-            await event.edit(f"**تـم الـسـماح لـه ✅ (ID: {sid})**")
+            await event.edit(f"**تـم الـسـماح لـه بـالـدخول ✅ (ID: {sid})**")
+            
         elif ".كتم" in event.text:
             muted_users.add(sid)
             await event.edit(f"**تـم كـتـم الـمـسـتـخـدم 🤐**")
+            
+        elif ".رفض" in event.text:
+            if event.is_private:
+                # في الخاص يتم الحظر فوراً
+                await event.client(functions.contacts.BlockRequest(id=sid))
+                await event.edit("**🚫 تم رفض المستخدم وحظره من الخاص.**")
+            else:
+                # في المجموعات يتم الطرد
+                try:
+                    await client.kick_participant(event.chat_id, sid)
+                    await event.edit("**🚷 تم طرد المستخدم من المجموعة بنجاح.**")
+                except:
+                    await event.edit("**⚠️ فشل الطرد! تأكد من صلاحيات المشرف.**")
+                    
     except Exception as e: await event.edit(f"**خطأ: {e}**")
 
-# أمر الفحص (جربه في الرسائل المحفوظة)
+# أمر فحص الحالة
 @client.on(events.NewMessage(pattern=r"\.فحص", outgoing=True))
 async def ping_cmd(event):
     await event.edit("**⚡ سـورس الـمـتـمـرد شـغـال والأوامـر سـبـرت!**")
