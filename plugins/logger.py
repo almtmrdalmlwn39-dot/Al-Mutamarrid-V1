@@ -1,25 +1,27 @@
 from telethon import events
 from __main__ import client
 
-# 1. كشف الرسائل المحذوفة
+# كاشف الحذف المطور
 @client.on(events.MessageDeleted)
 async def deleted_logger(event):
+    # ملاحظة: في المجموعات تليجرام يرسل الايدي فقط
     for msg_id in event.deleted_ids:
-        # يمكنك جعل البوت يرسل الرسائل المحذوفة لـ "الرسائل المحفوظة" عندك
         await client.send_message("me", f"**- تم حذف رسالة بالايدي: `{msg_id}`**\n**- في الدردشة: `{event.chat_id}`**")
 
-# 2. كشف الرسائل المعدلة
+# كاشف التعديل (يعطيك الشخص والاسم)
 @client.on(events.MessageEdited)
 async def edited_logger(event):
-    if event.is_private:
-        old_text = event.message.text
-        await client.send_message("me", f"**- تم تعديل رسالة في الخاص 🛡️**\n**- النص الجديد: {old_text}**")
-
-# 3. امر فحص السرعة (بينغ)
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.بينج"))
-async def ping(event):
-    start = datetime.now()
-    await event.edit("**- جاري فحص سرعة الاستجابة...**")
-    end = datetime.now()
-    ms = (end - start).microseconds / 1000
-    await event.edit(f"**- سرعة استجابة المتمرد: `{ms}` ملي ثانية ⚡**")
+    if event.sender:
+        name = event.sender.first_name
+        user_id = event.sender_id
+        old_text = event.text
+        chat_name = event.chat.title if event.is_group else "الخاص"
+        
+        log_msg = (
+            f"**- تم تعديل رسالة 🛡️**\n"
+            f"**- الشخص : [{name}](tg://user?id={user_id})**\n"
+            f"**- الايدي : `{user_id}`**\n"
+            f"**- المكان : {chat_name}**\n"
+            f"**- النص الجديد : {old_text}**"
+        )
+        await client.send_message("me", log_msg)
