@@ -1,5 +1,6 @@
 from telethon import events
 
+# جعلناه يرد على (اوامري، الاوامر، اوامر) في سطر واحد
 @events.register(events.NewMessage(pattern=r"\.(اوامري|الاوامر|اوامر)$", outgoing=True))
 async def help_menu(event):
     help_text = """
