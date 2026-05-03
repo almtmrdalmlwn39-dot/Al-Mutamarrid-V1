@@ -1,25 +1,16 @@
 import asyncio, os, pytz, re, random
 from datetime import datetime
-from telethon import events, functions, types, Button
+from telethon import events, functions, types
 from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChatBannedRights
 from __main__ import client  
 
-# --- [ اعدادات المتمرد ] ---
+# --- [ إعدادات الحماية والمتمرد ] ---
 approved_users = set()
+security_enabled = True # تفعيل الحماية تلقائياً
 
-# حقوق الحظر الكاملة للتفليش
-BANNED_RIGHTS = ChatBannedRights(
-    until_date=None,
-    view_messages=True,
-    send_messages=True,
-    send_media=True,
-    send_stickers=True,
-    send_gifs=True,
-    send_games=True,
-    send_inline=True,
-    embed_links=True,
-)
+# حقوق الحظر للتفليش
+BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True)
 
 # --- [ 1. محرك الوقت والنبذة ] ---
 async def bio_time_updater():
@@ -33,89 +24,63 @@ async def bio_time_updater():
         await asyncio.sleep(60)
 client.loop.create_task(bio_time_updater())
 
-# --- [ 2. محرك التفليش الحقيقي والادارة ] ---
+# --- [ 2. محرك الحماية (الرد على الخاص) ] ---
+@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+async def pm_protection(event):
+    if not security_enabled: return
+    sender = await event.get_sender()
+    if sender.bot or sender.contact or event.sender_id in approved_users:
+        return
+    if event.sender_id == (await client.get_me()).id:
+        return
+
+    # رسالة الحماية (عريضة وسادة)
+    warn_text = (
+        f"**- عذراً يا {sender.first_name} 🛡️**\n"
+        f"**- نظام حماية المتمرد مفعل حالياً.**\n"
+        f"**- لا يمكنك المراسلة حتى يتم السماح لك.**\n"
+        f"**- انتظر حتى يرى المتمرد رسالتك ويقرر.**"
+    )
+    await event.reply(warn_text)
+
+# --- [ 3. أوامر التحكم (سماح، رفض، تفليش) ] ---
 @client.on(events.NewMessage(outgoing=True))
 async def mutamarrid_engine(event):
     cmd = event.text
     chat = event.chat_id
 
-    # 1. تفليش القروب (طرد جماعي حقيقي مع عبارة المتمرد)
-    if cmd == ".تفليش":
-        await event.edit("**- جاري بدء عملية التفليش الحقيقية... 🧨**")
+    # أمر السماح (بالرد على الشخص)
+    if cmd == ".سماح" and event.is_reply:
+        reply = await event.get_reply_message()
+        approved_users.add(reply.sender_id)
+        await event.edit("**- تم السماح له بالمراسلة ✅**")
+
+    # أمر الرفض والحظر
+    elif cmd == ".رفض" and event.is_reply:
+        reply = await event.get_reply_message()
+        await client(functions.contacts.BlockRequest(id=reply.sender_id))
+        await event.edit("**- تم حظر الشخص بنجاح 🚫**")
+
+    # أمر التفليش
+    elif cmd == ".تفليش":
+        await event.edit("**- جاري بدء التفليش الحقيقي... 🧨**")
         count = 0
         async for user in client.iter_participants(chat):
-            if user.id == (await client.get_me()).id: continue
             try:
                 await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
                 count += 1
             except: continue
-        
-        # عبارة المتمرد عند الانتهاء
-        await event.respond(
-            f"**- تم تفليش المجموعة بنجاح ✅**\n"
-            f"**- عدد المطرودين : {count}**\n\n"
-            f"**- هنا سادت القوة، وهنا فرض المتمرد سيطرته.. لا احد ينجو من طغيان المتمرد 🦅**"
-        )
+        await event.respond(f"**- تم التفليش بنجاح لـ {count} ضحية.**")
 
-    # 2. تصفية الحسابات المحذوفة
-    elif cmd == ".تصفية":
-        await event.edit("**- جاري تصفية الحسابات المحذوفة... 🔍**")
-        count = 0
-        async for user in client.iter_participants(chat):
-            if user.deleted:
-                try:
-                    await client.kick_participant(chat, user.id)
-                    count += 1
-                except: continue
-        await event.edit(f"**- تمت التصفية بنجاح ✅**\n**- تم حذف {count} حساب محذوف.**")
-
-    # 3. سبام (تكرار)
-    elif cmd.startswith(".تكرار"):
-        try:
-            args = cmd.split(" ", 2)
-            count = int(args[1])
-            message = args[2]
-            await event.delete()
-            for i in range(count):
-                await client.send_message(chat, message)
-                await asyncio.sleep(0.1)
-        except: await event.edit("**- استخدم: .تكرار [العدد] [النص]**")
-
-    # 4. أمر الايدي (ID) العريض
-    elif cmd == ".ايدي" or cmd == "ايدي":
-        target = await event.get_reply_message() if event.is_reply else await client.get_me()
-        user = await client.get_entity(target.sender_id if event.is_reply else target.id)
-        caption = (
-            f"**- معلومات المستخدم 🛡️**\n"
-            f"**- - - - - - - - - -**\n"
-            f"**- الاسم : {user.first_name}**\n"
-            f"**- الايدي : `{user.id}`**\n"
-            f"**- الرتبة : {'المتمرد' if not event.is_reply else 'الضحية'}**\n"
-            f"**- الدولة : اليمن 🇾🇪**\n"
-            f"**- - - - - - - - - -**"
-        )
-        photo = await client.download_profile_photo(user.id)
-        if photo: 
-            await client.send_file(chat, photo, caption=caption)
-            await event.delete()
-        else: await event.edit(caption)
-
-    # 5. قائمة الاوامر
+    # قائمة الأوامر المحدثة
     elif cmd == ".الاوامر":
-        menu = (
-            "**- قائمة اوامر المتمرد الخارقة :**\n"
+        await event.edit(
+            "**- أوامر المتمرد الشاملة :**\n"
             "**- - - - - - - - - -**\n"
-            "**- اوامر التفليش :**\n"
-            "**• .تفليش : طرد كل اعضاء القروب.**\n"
-            "**• .تصفية : حذف الحسابات المحذوفة.**\n"
-            "**• .تكرار [العدد] [النص] : سبام رسائل.**\n\n"
-            "**- اوامر الحساب :**\n"
-            "**• .ايدي | .فحص | .المطور**\n\n"
-            "**- اوامر الادارة :**\n"
-            "**• .سماح | .رفض | .حظر**\n"
-            "**- - - - - - - - - -**\n"
-            "**- قوتنا في تمردنا.. المتمرد**"
+            "**• .سماح | .رفض : للتحكم بالخاص.**\n"
+            "**• .تفليش | .تدمير : للهجوم.**\n"
+            "**• .بينج | .ايدي : للفحص.**\n"
+            "**- - - - - - - - - -**"
         )
-        await event.edit(menu)
 
-print("🔥 تم التحديث.. سورس المتمرد جاهز للانفجار!")
+print("🔥 تم دمج الحماية والتفليش بنجاح!")
