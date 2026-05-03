@@ -5,7 +5,7 @@ from datetime import datetime
 from telethon import events, functions, types, Button
 from __main__ import client  
 
-# --- إعدادات الحماية والبيانات ---
+# --- إعدادات الحماية (تخزين في الذاكرة لتجاوز خطأ قاعدة البيانات) ---
 approved_users = set()
 muted_users = set()
 pm_warner = {}
@@ -26,13 +26,14 @@ async def bio_time_updater():
 
 client.loop.create_task(bio_time_updater())
 
-# --- 2. حماية الخاص الذكية ---
+# --- 2. حماية الخاص وإظهار الأزرار ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def mutamarrid_guard(event):
     global security_enabled
     if not security_enabled: return
     sender = await event.get_sender()
     me = await event.client.get_me()
+    
     if not sender or sender.bot or sender.id == me.id or sender.id in approved_users: return
     if sender.id in muted_users: return
     
@@ -45,19 +46,27 @@ async def mutamarrid_guard(event):
             "**‹ مـمـلـكـة الـمـتـمـرد الـتـقـنـيـة ⚡ ›**\n"
             "**— — — — — — — — — —**\n"
             f"**• الـتـحـذيـر : ({pm_warner[sender.id]} مـن {PM_MAX_REPS})**\n"
-            "**• حـدد سـبـب تـواجـدك بـالأزرار :**\n"
+            "**• حـدد سـبـب تـواجـدك بـالأزرار لـتـفـادي الـحـظـر :**\n"
             "**— — — — — — — — — —**\n"
         )
-        buttons = [[Button.url("• مـراسـلـة الـمـطـور •", f"tg://user?id={me.id}")]]
+        # مصفوفة الأزرار الشفافة
+        buttons = [
+            [Button.url("• طـلـب مـسـاعـدة •", f"tg://user?id={me.id}")],
+            [Button.url("• مـراسـلـة الـمـطـور •", f"tg://user?id={me.id}")]
+        ]
         await event.client.send_file(event.chat_id, photo, caption=caption, buttons=buttons)
         if photo and os.path.exists(photo): os.remove(photo)
     else:
         await event.client(functions.contacts.BlockRequest(id=sender.id))
 
-# --- 3. أوامر الإدارة الشاملة (سماح، كتم، رفض) ---
-@client.on(events.NewMessage(pattern=r"\.(سماح|كتم|رفض)", outgoing=True))
+# --- 3. أوامر الإدارة الشاملة (تعديل لضمان الظهور) ---
+@client.on(events.NewMessage(pattern=r"\.(سماح|كتم|رفض|فحص)", outgoing=True))
 async def admin_cmds(event):
     try:
+        # أمر الفحص للتأكد من عمل السورس
+        if ".فحص" in event.text:
+            return await event.edit("**⚡ سـورس الـمـتـمـرد شـغـال والأوامـر سـبـرت!**")
+        
         if not event.is_reply: 
             return await event.edit("**⚠️ يجب الرد على رسالة المستخدم لتنفيذ الأمر!**")
         
@@ -66,7 +75,7 @@ async def admin_cmds(event):
         
         if ".سماح" in event.text:
             approved_users.add(sid)
-            await event.edit(f"**تـم الـسـماح لـه بـالـدخول ✅ (ID: {sid})**")
+            await event.edit(f"**تـم الـسـماح لـه بـالـدخول ✅**")
             
         elif ".كتم" in event.text:
             muted_users.add(sid)
@@ -74,20 +83,13 @@ async def admin_cmds(event):
             
         elif ".رفض" in event.text:
             if event.is_private:
-                # في الخاص يتم الحظر فوراً
                 await event.client(functions.contacts.BlockRequest(id=sid))
                 await event.edit("**🚫 تم رفض المستخدم وحظره من الخاص.**")
             else:
-                # في المجموعات يتم الطرد
                 try:
                     await client.kick_participant(event.chat_id, sid)
-                    await event.edit("**🚷 تم طرد المستخدم من المجموعة بنجاح.**")
+                    await event.edit("**🚷 تم طرد المستخدم بنجاح.**")
                 except:
                     await event.edit("**⚠️ فشل الطرد! تأكد من صلاحيات المشرف.**")
                     
     except Exception as e: await event.edit(f"**خطأ: {e}**")
-
-# أمر فحص الحالة
-@client.on(events.NewMessage(pattern=r"\.فحص", outgoing=True))
-async def ping_cmd(event):
-    await event.edit("**⚡ سـورس الـمـتـمـرد شـغـال والأوامـر سـبـرت!**")
