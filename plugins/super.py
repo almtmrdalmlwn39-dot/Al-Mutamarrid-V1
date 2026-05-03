@@ -1,8 +1,8 @@
 import asyncio, os, pytz, re, random
 from datetime import datetime
 from telethon import events, functions, types
-from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, EditPhotoRequest, EditDescriptionRequest
-from telethon.tl.types import ChatBannedRights, InputChatUploadedPhoto
+from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, EditDescriptionRequest
+from telethon.tl.types import ChatBannedRights
 from __main__ import client  
 
 # --- [ إعدادات المتمرد ] ---
@@ -10,7 +10,7 @@ approved_users = set()
 warned_users = set() 
 BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True, send_media=True, send_stickers=True, send_gifs=True, send_games=True, send_inline=True, embed_links=True)
 
-# --- [ 1. محرك الحماية الفخم ] ---
+# --- [ 1. محرك الحماية ] ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def pm_protection(event):
     sender = await event.get_sender()
@@ -18,7 +18,7 @@ async def pm_protection(event):
         return
     if event.sender_id == (await client.get_me()).id:
         return
-    warn_text = f"**- مرحباً بك في خاص المتمرد 🦅\n- نظام الحماية مفعل تلقائياً.\n- المطور مشغول حالياً، سيتم سحقك إذا كررت الرسائل.**"
+    warn_text = f"**- مرحباً بك في خاص المتمرد 🦅\n- نظام الحماية مفعل تلقائياً.\n- المطور مشغول حالياً.**"
     try:
         me = await client.get_me()
         photo = await client.download_profile_photo(me.id)
@@ -31,20 +31,18 @@ async def pm_protection(event):
         await event.reply(warn_text)
         warned_users.add(event.sender_id)
 
-# --- [ 2. محرك الاكتساح والتدمير ] ---
+# --- [ 2. محرك الاكتساح ] ---
 @client.on(events.NewMessage(outgoing=True))
 async def mutamarrid_omega_engine(event):
     cmd = event.text
     chat = event.chat_id
 
-    # --- أمر التفليش والسيطرة ---
+    # --- قسم التفليش ---
     if cmd == ".تدمير" or cmd == ".تفليش":
         await event.edit("**- جـاري بـدء الـزلزال.. الـمتمرد يـكتسح الـمكان 🧨**")
-        
-        # محاولة تغيير معالم المجموعة (تحتاج صلاحية تغيير المعلومات)
         try:
             await client(EditTitleRequest(chat, "تـم الـتدمير بـواسطة الـمتمرد 🦅"))
-            await client(EditDescriptionRequest(chat, "المتمرد التقني مر من هنا وسحق الجميع.. لا مكان للضعفاء."))
+            await client(EditDescriptionRequest(chat, "المتمرد التقني مر من هنا وسحق الجميع."))
         except: pass
 
         count = 0
@@ -54,48 +52,46 @@ async def mutamarrid_omega_engine(event):
             try:
                 await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
                 count += 1
-                if count % 10 == 0: # تحديث كل 10 ضحايا للسرعة
-                    await event.edit(f"**- جـاري الـسحق.. الـضحايا حتى الآن: {count}**")
             except: continue
         await event.respond(f"**- تـم سـحق {count} عـضو بـنجاح ✅\n- انـتهى عـصر هـذا الـجروب بـواسطة الـمتمرد 🦅**")
 
-    # --- أمر التكرار القوي ---
+    # --- قسم التكرار ---
     elif cmd.startswith(".تكرار"):
         parts = cmd.split(" ", 2)
         if len(parts) == 3:
             count = int(parts[1])
-            await event.delete()
             for i in range(count):
                 await client.send_message(chat, parts[2])
                 await asyncio.sleep(0.1)
 
-    # --- أوامر الإدارة والخدمة ---
+    # --- قسم الخدمة ---
+    elif cmd == ".بينج":
+        start = datetime.now()
+        await event.edit("**- جاري فحص الاستجابة...**")
+        end = datetime.now()
+        ms = (end - start).microseconds / 1000
+        await event.edit(f"**- سرعة المتمرد : `{ms}`ms ⚡**")
+
     elif cmd == ".سماح" and event.is_reply:
         reply = await event.get_reply_message()
         approved_users.add(reply.sender_id)
-        await event.edit("**- تم الـسماح لـه ✅**")
-    
-    elif cmd == ".بينج":
-        start = datetime.now()
-        await event.edit("**- جاري فحص استجابة المتمرد...**")
-        end = datetime.now()
-        ms = (end - start).microseconds / 1000
-        await event.edit(f"**- سرعة الانفجار : `{ms}`ms ⚡**")
+        await event.edit("**- تم السماح له ✅**")
 
     elif cmd == ".غادر":
-        await event.edit("**- الـمتمرد لا يـبقى فـي أمـاكن الـضعفاء.. وداعـاً 👋**")
+        await event.edit("**- وداعاً.. المتمرد يغادر 🦅**")
         await client(functions.channels.LeaveChannelRequest(chat))
 
-    # --- قائمة الأوامر المحدثة ---
+    # --- قائمة الأوامر (الآن كاملة) ---
     elif cmd == ".الاوامر":
         menu = (
             "**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n"
             "**— — — — — — — — — —**\n"
-            "**🛡️ | الـحماية :** (.سماح | .رفض)\n"
             "**🧨 | الـتدمير :** (.تدمير | .تفليش | .تكرار)\n"
-            "**⚙️ | الـخدمة :** (.بينج | .اذاعة | .غادر)\n"
-            "**🔍 | الـفحص :** (.ايدي | .فحص | .الرابط)\n"
+            "**🛡️ | الـحماية :** (.سماح | .حماية)\n"
+            "**⚙️ | الـخدمة :** (.بينج | .غادر | .اذاعة)\n"
             "**📊 | الإدارة :** (.كتم | .طرد | .حظر)\n"
+            "**🔍 | الـفحص :** (.ايدي | .فحص)\n"
+            "**🎮 | الـتسلية :** (.كشف الكذب)\n"
             "**— — — — — — — — — —**\n"
             "**- الـقوة لـلمتمرد فـقط 🇾🇪**"
         )
