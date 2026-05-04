@@ -18,6 +18,7 @@ CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمن
 # --- [ تثبيت النبذة الشخصية القوية ] ---
 async def set_fixed_bio():
     try:
+        # النبذة ثابتة كما طلبتها يا وحش
         my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
         await client(functions.account.UpdateProfileRequest(about=my_bio))
     except: pass
@@ -40,6 +41,7 @@ async def pm_protection(event):
         f"**- تـوقيت الـيمن الـمحدد: {time_now}**\n"
         "**— — — — — — — — — —**\n"
         "**🛡️ | جـدار الـحماية مـفعل تـلقائياً.**\n"
+        "**⏳ | جـاري تـحليل طـلبك، انـتظر الـمطور.**\n"
         f"{CYBER_IDENTITY}"
     )
     
@@ -52,20 +54,22 @@ async def pm_protection(event):
         warned_users.add(event.sender_id)
     except: pass
 
-# --- [ 2. المحرك الرئيسي للأوامر ] ---
+# --- [ 2. المحرك الرئيسي للأوامر القوية ] ---
 @client.on(events.NewMessage(outgoing=True))
 async def mutamarrid_engine(event):
     cmd = event.text
     chat = event.chat_id
 
+    # أوامر الحماية والخاص
     if cmd == ".سماح":
         approved_users.add(event.chat_id)
-        await event.edit("**✅ تـم الـسماح.**")
+        await event.edit("**✅ تـم الـسماح لـهذا الـمستخدم.**")
     
     elif cmd == ".حظر_خاص":
-        await event.edit("**🚫 جـاري الـحظر..**")
+        await event.edit("**🚫 جـاري حـظر الـمستخدم..**")
         await client(functions.contacts.BlockRequest(id=event.chat_id))
 
+    # أوامر السيطرة (تدمير وتفليش)
     elif cmd in [".تدمير", ".تفليش"]:
         await event.edit("**- الـتطهير بـدأ 🧨**")
         try:
@@ -86,5 +90,14 @@ async def mutamarrid_engine(event):
         ms = (datetime.now() - start).microseconds / 1000
         await event.edit(f"**- الـسرعة : `{ms}`ms ⚡**")
 
+    elif cmd == ".فحص":
+        await event.edit("**🛡️ الـسورس شـغال بـكفاءة عـالية يـا مـتمرد!**")
+
     elif cmd in [".الاوامر", ".اوامر"]:
-        await event.edit(f"**- أوامـر الـمتمرد 🦅 :**\n\n**🛡️ .سماح | .حظر_خاص**\n**🧨 .تدمير | .تفليش | .تكرار**\n\n{CYBER_IDENTITY}")
+        await event.edit(
+            f"**- أوامـر الـمتمرد الـقوية 🦅 :**\n\n"
+            "**🛡️ .سماح | .حظر_خاص**\n"
+            "**🧨 .تدمير | .تفليش | .تكرار**\n"
+            "**⚙️ .بينج | .فحص | .ايدي**\n\n"
+            f"{CYBER_IDENTITY}"
+        )
