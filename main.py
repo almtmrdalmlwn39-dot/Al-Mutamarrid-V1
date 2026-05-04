@@ -12,7 +12,6 @@ API_ID = 20585941
 API_HASH = "4c8b6debbee47ab644c82305487f34b2"
 SESSION = os.environ.get("TERMUX_SESSION") or ""
 
-# تعريف الكليانت بشكل صحيح لتجنب خطأ AttributeError
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 
 # --- [ الهوية الشخصية الفخمة ] ---
@@ -37,7 +36,8 @@ async def update_profile_loop():
                 first_name=f"{FIXED_NAME} | {z_time}",
                 about=f"{MY_BIO} | {z_time}"
             ))
-        except: pass
+        except Exception as e:
+            print(f"Update Error: {e}")
         await asyncio.sleep(60)
 
 # --- [ 2. محرك الرد التلقائي بالخاص ] ---
@@ -46,23 +46,48 @@ async def cyber_welcome(event):
     if event.is_bot: return
     me = await client.get_me()
     if event.sender_id == me.id: return
+    
     if event.sender_id not in welcomed_users:
+        sender = await event.get_sender()
         time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
         z_time = custom_nums(time_now)
-        welcome_msg = f"**- مـرحباً بـك يـا {event.sender.first_name} فـي سـيرفر الـمتمرد 🦅\n- الـوقت: {z_time}**\n\n{CYBER_IDENTITY}"
+        welcome_msg = (
+            f"**- مـرحباً بـك يـا {sender.first_name} فـي سـيرفر الـمتمرد 🦅\n"
+            f"**- تـوقيت الـيمن الـمحدد: {z_time}**\n"
+            "**— — — — — — — — — —**\n"
+            f"{CYBER_IDENTITY}"
+        )
         try:
             photo = await client.download_profile_photo(me.id)
-            await client.send_file(event.chat_id, photo, caption=welcome_msg)
+            if photo:
+                await client.send_file(event.chat_id, photo, caption=welcome_msg)
+                if os.path.exists(photo): os.remove(photo)
+            else:
+                await event.reply(welcome_msg)
             welcomed_users.add(event.sender_id)
-        except: await event.reply(welcome_msg)
+        except: pass
 
-# --- [ الإقلاع ] ---
-async def main():
+# --- [ 3. محرك الأوامر والتفليش ] ---
+@client.on(events.NewMessage(outgoing=True))
+async def commands_engine(event):
+    text = event.raw_text
+    if text == ".حالة":
+        start = time.time()
+        await client(functions.PingRequest(ping_id=0))
+        ping_ms = round((time.time() - start) * 1000)
+        await event.edit(f"**🚀 الـمتمرد نـشط وبـكامل قـوته:**\n**⚡ الـسرعة: `{custom_nums(str(ping_ms))}` ms**\n\n{CYBER_IDENTITY}")
+
+# --- [ الإقلاع الشامل - تم تعديله لحل مشكلة Loop ] ---
+async def start_mared():
     await client.start()
     print(f"🦅 الـمتمرد {FIXED_NAME} نـشط الآن..")
     asyncio.create_task(update_profile_loop())
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    try:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(start_mared())
+    except RuntimeError:
+        # حل لمشكلة No current event loop
+        asyncio.run(start_mared())
