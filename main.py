@@ -1,81 +1,61 @@
-import os
-import glob
-import importlib
-import asyncio
+import os, glob, importlib, asyncio
 from telethon import TelegramClient, events, Button
 from telethon.sessions import StringSession
 from flask import Flask
 from threading import Thread
 
-# --- إعدادات السيرفر لإبقاء البوت حياً ---
+# --- سيرفر إبقاء البوت حياً ---
 app = Flask('')
 @app.route('/')
 def home(): return "I am alive"
-
-def run(): 
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-
+def run(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 def keep_alive():
     t = Thread(target=run)
     t.daemon = True
     t.start()
 
-# --- إعدادات الحساب والبوت من ملف config ---
+# --- إعدادات الحساب والبوت ---
 from config import API_ID, API_HASH, SESSION
 BOT_TOKEN = "8662258332:AAF_B4f_UvP_ZpGD8Bzbu-hu3qpb2COzx3s"
 
-# تعريف الكلاينت والبوت
+# تعريف الكلاينت والبوت (تصدير العميل لكي تراه الملحقات)
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 tgbot = TelegramClient("bot_assistant", API_ID, API_HASH)
 
-# --- نظام حماية الخاص بالأزرار ---
-@tgbot.on(events.NewMessage(pattern='/start'))
-async def start_handler(event):
-    if event.is_private:
-        me = await client.get_me()
-        text = f"🛡️ **أهلاً بك في نظام حماية المتمرد التقني.**\n\nأنا البوت المساعد للمطور [{me.first_name}](tg://user?id={me.id}).\n\nيرجى اختيار سبب التواصل لكي يتم السماح لك بالدخول:"
-        buttons = [
-            [Button.inline("طلب سورس أو برمجة ⚙️", data="dev")],
-            [Button.inline("تواصل شخصي 👤", data="personal")],
-            [Button.inline("تبادل أو إعلان 🤝", data="trade")]
-        ]
-        await event.respond(text, buttons=buttons)
+# جعل العميل متاحاً للملحقات
+import __main__
+__main__.client = client
 
-@tgbot.on(events.CallbackQuery)
-async def callback(event):
-    if event.data == b"dev": await event.edit("⚙️ **تم إرسال طلبك.. انتظر رده.**")
-    elif event.data == b"personal": await event.edit("👤 **تم إخطار المتمرد برغبتك في التواصل.**")
-    elif event.data == b"trade": await event.edit("🤝 **أرسل تفاصيل التبادل الآن.**")
-
-# --- دالة تحميل الملحقات ---
+# --- دالة تحميل الملحقات (معدلة لتعمل صح) ---
 def load_plugins():
     path = "plugins/*.py"
     for name in glob.glob(path):
         module_name = name.replace(".py", "").replace("/", ".").replace("\\", ".")
         try:
             importlib.import_module(module_name)
-            print(f"✅ تم تحميل: {module_name}")
-        except: pass
+            print(f"✅ تم تحميل الملحق: {module_name}")
+        except Exception as e:
+            print(f"❌ فشل تحميل {module_name}: {e}")
 
-# --- الدالة الأساسية للتشغيل ---
+# --- الدالة الأساسية ---
 async def start_services():
-    print("⏳ جاري بدء تشغيل النظام المزدوج...")
+    print("⏳ جاري بدء إقلاع سورس المتمرد...")
     await client.start()
     await tgbot.start(bot_token=BOT_TOKEN)
+    
+    # تحميل الأوامر من plugins بعد تشغيل الكلاينت
     load_plugins()
-    print("🛡️ السورس والبوت الآن Live!")
-    # تشغيل الحساب والبوت معاً في نفس الدورة
+    
+    print("🛡️ السورس الآن Live والأوامر جاهزة!")
     await asyncio.gather(
         client.run_until_disconnected(),
         tgbot.run_until_disconnected()
     )
 
 if __name__ == '__main__':
-    keep_alive() # تشغيل سيرفر الويب في خلفية منفصلة
-    # إنشاء دورة برمجية جديدة وضبطها كالدورة الأساسية
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    keep_alive()
+    loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(start_services())
     except Exception as e:
-        print(f"❌ حدث خطأ: {e}")
+        print(f"❌ خطأ في التشغيل: {e}")
