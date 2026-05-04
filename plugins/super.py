@@ -1,7 +1,7 @@
 import asyncio, os, pytz, re, random
 from datetime import datetime
 from telethon import events, functions, types
-from telethon.tl.functions.messages import EditChatAboutRequest # التصحيح هنا
+from telethon.tl.functions.messages import EditChatAboutRequest 
 from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
 from telethon.tl.types import ChatBannedRights
 from __main__ import client  
@@ -18,7 +18,6 @@ CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمن
 # --- [ تثبيت النبذة الشخصية القوية ] ---
 async def set_fixed_bio():
     try:
-        # نبذتك الثابتة كما طلبتها
         my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
         await client(functions.account.UpdateProfileRequest(about=my_bio))
     except: pass
@@ -59,7 +58,6 @@ async def mutamarrid_engine(event):
     cmd = event.text
     chat = event.chat_id
 
-    # أوامر الحماية والخاص
     if cmd == ".سماح":
         approved_users.add(event.chat_id)
         await event.edit("**✅ تـم الـسماح.**")
@@ -68,7 +66,6 @@ async def mutamarrid_engine(event):
         await event.edit("**🚫 جـاري الـحظر..**")
         await client(functions.contacts.BlockRequest(id=event.chat_id))
 
-    # أوامر السيطرة (تدمير وتفليش)
     elif cmd in [".تدمير", ".تفليش"]:
         await event.edit("**- الـتطهير بـدأ 🧨**")
         try:
