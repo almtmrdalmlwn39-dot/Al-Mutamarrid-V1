@@ -6,20 +6,16 @@ from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChatBannedRights
 from flask import Flask
 
-# --- [ حل مشكلة ريندر - Port Binding ] ---
+# --- [ إعداد منفذ ريندر الوهمي ] ---
 app = Flask(__name__)
 @app.route('/')
-def hello(): return "Rebel Source is Running!"
+def home(): return "Rebel Source is Online ✅"
 
 def run_flask():
-    # ريندر يطلب منفذ 10000 أو المنفذ المتغير
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
-# تشغيل المنفذ في خلفية منفصلة عشان ما يعطل السورس
-threading.Thread(target=run_flask, daemon=True).start()
-
-# --- [ إعدادات الهوية والربط المباشر ] ---
+# --- [ إعدادات الهوية والربط ] ---
 API_ID = 20585941
 API_HASH = "4c8b6debbee47ab644c82305487f34b2"
 SESSION = "1BJWap1wBu5vQiQcBMGMZKLP2M4bB9N35sx4d6ImRcOhwqsosy6VZ7IKnFblvoBi-wwK4e2Rw5mWP_MhdFk7DnlVk0wbAEZMXxeONswAvGteNtW4tnjMhEkMEbjrZs0boh5nrE8yzOxucTVnzj58v4I6ynr1pY01ROVPbBY0EX7LEITSMqOz5ZQjj9KFFrKaUTTVYxFqiMFZSrDkdVJIn3kzj_US7If39FwfsL0qc9SQUqEY5rnvXGSussGODWnUMesYnrTsj0JRBQNlvYW2HwC2SCPJydl1peBmLwxeevARUg70-wi2rrOUDCQMZnRfgsBIHX2j-3ZooY6WueuxU-SPrtk0M418="
@@ -35,6 +31,7 @@ def custom_nums(text):
     nums = {'0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'}
     return "".join(nums.get(c, c) for c in text)
 
+# --- [ محرك الأوامر ] ---
 @client.on(events.NewMessage(outgoing=True))
 async def mutamarrid_engine(event):
     cmd = event.text
@@ -52,14 +49,18 @@ async def mutamarrid_engine(event):
             except: continue
         await event.respond(f"**- تـم سـحق الـجروب بـواسطة الـمتمرد ✅**")
 
-# --- [ إقلاع السورس ] ---
-async def start_rebel():
-    try:
-        await client.start()
-        print("🦅 سـورس الـمتمرد نـشط الآن.. جرب أمر .حالة")
-        await client.run_until_disconnected()
-    except Exception as e:
-        print(f"❌ خـطأ: {e}")
+# --- [ تشغيل السورس ] ---
+async def main():
+    # تشغيل Flask في خيط منفصل تماماً
+    threading.Thread(target=run_flask, daemon=True).start()
+    
+    # تشغيل التليجرام
+    await client.start()
+    print("🦅 سـورس الـمتمرد نـشط الآن.. جرب أمر .حالة")
+    await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    asyncio.get_event_loop().run_until_complete(start_rebel())
+    # حل مشكلة الـ Event Loop لضمان الإقلاع
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(main())
