@@ -4,7 +4,13 @@ from collections import defaultdict
 from telethon import events, functions, types
 from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
 from telethon.tl.types import ChatBannedRights
-from __main__ import client  
+
+# --- [ الإصلاح هـنا ] ---
+# بدلاً من الاستدعاء المباشر الذي يسبب Error، نستخدم هذه الطريقة المضمونة
+try:
+    from main import client
+except:
+    from __main__ import client
 
 # --- [ الإعدادات ] ---
 YEMEN_TZ = pytz.timezone('Asia/Aden')
@@ -26,7 +32,6 @@ async def fast_security_engine(event):
 
     # --- [ نظام الترحيب والتحذير الفوري ] ---
     if sender_id not in welcomed_users:
-        # الرسالة الأولى: ترحيب
         sender = await event.get_sender()
         time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
         welcome_msg = (
@@ -38,16 +43,11 @@ async def fast_security_engine(event):
             f"{CYBER_IDENTITY}"
         )
         try:
-            photo = await client.download_profile_photo(me.id)
-            if photo:
-                await client.send_file(event.chat_id, photo, caption=welcome_msg)
-                if os.path.exists(photo): os.remove(photo)
-            else:
-                await event.reply(welcome_msg)
+            # تم تبسيط الإرسال هنا لضمان السرعة في ريندر
+            await event.reply(welcome_msg)
             welcomed_users.add(sender_id)
         except: pass
     else:
-        # من الرسالة الثانية فصاعداً: تحذير فوري
         now = datetime.now().timestamp()
         user_messages[sender_id] = [t for t in user_messages[sender_id] if now - t < 10]
         user_messages[sender_id].append(now)
@@ -55,10 +55,8 @@ async def fast_security_engine(event):
         msg_count = len(user_messages[sender_id])
         
         if msg_count < 5:
-            # تحذير فوري مع كل رسالة
             await event.reply("**⚠️ هوي يا مستخدم! ممنوع التكرار. جدار حماية المتمرد يراقبك، انتظر الرد! 🚫**")
         else:
-            # حظر تلقائي إذا زاد عن حده (5 رسائل)
             await event.reply("**🚫 تم حظرك تلقائياً لتجاوزك حدود الأدب والتكرار المزعج!**")
             await client(functions.contacts.BlockRequest(id=sender_id))
 
@@ -74,7 +72,6 @@ async def reject_cmd(event):
 @client.on(events.NewMessage(pattern=r'^\.سماح$', outgoing=True))
 async def allow_cmd(event):
     welcomed_users.add(event.chat_id)
-    # ملاحظة: السماح هنا يجعله يتجاوز نظام التحذير
     await event.edit("**✅ تـم الـسماح بـفخامة.**")
 
 @client.on(events.NewMessage(pattern=r'^\.(الاوامر|اوامر)$', outgoing=True))
