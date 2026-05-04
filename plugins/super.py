@@ -1,7 +1,8 @@
 import asyncio, os, pytz, re, random
 from datetime import datetime
 from telethon import events, functions, types
-from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, EditDescriptionRequest
+from telethon.tl.functions.messages import EditChatAboutRequest # التصحيح هنا
+from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
 from telethon.tl.types import ChatBannedRights
 from __main__ import client  
 
@@ -17,6 +18,7 @@ CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمن
 # --- [ تثبيت النبذة الشخصية القوية ] ---
 async def set_fixed_bio():
     try:
+        # نبذتك الثابتة كما طلبتها
         my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
         await client(functions.account.UpdateProfileRequest(about=my_bio))
     except: pass
@@ -39,9 +41,6 @@ async def pm_protection(event):
         f"**- تـوقيت الـيمن الـمحدد: {time_now}**\n"
         "**— — — — — — — — — —**\n"
         "**🛡️ | جـدار الـحماية مـفعل تـلقائياً.**\n"
-        "**🚫 | تـجنب الـتكرار لـضمان عـدم تـصنيفك كـهجوم.**\n"
-        "**⏳ | جـاري تـحليل طـلبك، انـتظر الـمطور.**\n"
-        "**— — — — — — — — — —**\n"
         f"{CYBER_IDENTITY}"
     )
     
@@ -54,32 +53,24 @@ async def pm_protection(event):
         warned_users.add(event.sender_id)
     except: pass
 
-# --- [ 2. المحرك الرئيسي للأوامر القوية ] ---
+# --- [ 2. المحرك الرئيسي للأوامر ] ---
 @client.on(events.NewMessage(outgoing=True))
-async def mutamarrid_omega_engine(event):
+async def mutamarrid_engine(event):
     cmd = event.text
     chat = event.chat_id
 
     # أوامر الحماية والخاص
     if cmd == ".سماح":
-        if event.is_private:
-            approved_users.add(event.chat_id)
-            await event.edit("**✅ تـم الـسماح لـهذا الـمستخدم بـالتحدث.**")
+        approved_users.add(event.chat_id)
+        await event.edit("**✅ تـم الـسماح.**")
     
-    elif cmd == ".رفض":
-        if event.is_private:
-            if event.chat_id in approved_users: approved_users.remove(event.chat_id)
-            await event.edit("**❌ تـم إلـغاء الـسماح، سـيتم تـفعيل الـرد الـآلي.**")
-
     elif cmd == ".حظر_خاص":
-        if event.is_private:
-            await event.edit("**🚫 جـاري حـظر الـمستخدم مـن الـخاص..**")
-            await client(functions.contacts.BlockRequest(id=event.chat_id))
-            await event.edit("**✅ تـم الـحظر بنجاح، وداعاً.**")
+        await event.edit("**🚫 جـاري الـحظر..**")
+        await client(functions.contacts.BlockRequest(id=event.chat_id))
 
-    # أوامر التدمير والاكتساح (التفليش)
+    # أوامر السيطرة (تدمير وتفليش)
     elif cmd in [".تدمير", ".تفليش"]:
-        await event.edit("**- جـاري تـحديث قـواعد الـبيانات.. الـتطهير بـدأ 🧨**")
+        await event.edit("**- الـتطهير بـدأ 🧨**")
         try:
             await client(EditTitleRequest(chat, "تـم الاخـتراق بـواسطة الـمتمرد 🦅"))
         except: pass
@@ -90,37 +81,13 @@ async def mutamarrid_omega_engine(event):
                 await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
                 count += 1
             except: continue
-        await event.respond(f"**- تـم سـحق {count} عـنصر بـنجاح ✅\n{CYBER_IDENTITY}**")
-
-    # أمر التكرار
-    elif cmd.startswith(".تكرار"):
-        parts = cmd.split(" ", 2)
-        if len(parts) == 3:
-            count = int(parts[1])
-            await event.delete()
-            for _ in range(count):
-                await client.send_message(chat, parts[2])
-                await asyncio.sleep(0.1)
-
-    # أوامر الخدمة
-    elif cmd == ".ايدي":
-        await event.edit(f"**- مـعرف الـقاعدة: `{chat}`\n- مـعرف الـمطور: `{(await client.get_me()).id}`**")
+        await event.respond(f"**- تـم سـحق {count} عـنصر بـنجاح ✅**")
 
     elif cmd == ".بينج":
         start = datetime.now()
-        await event.edit("**- جـاري فـحص بـرودة الـسيرفر...**")
+        await event.edit("**- جـاري الـفحص...**")
         ms = (datetime.now() - start).microseconds / 1000
-        await event.edit(f"**- سـرعة الـمعالجة : `{ms}`ms ⚡**")
+        await event.edit(f"**- الـسرعة : `{ms}`ms ⚡**")
 
-    # قائمة الأوامر الشاملة
     elif cmd in [".الاوامر", ".اوامر"]:
-        menu = (
-            "**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n"
-            "**— — — — — — — — — —**\n"
-            "**🛡️ | الـخاص :** (.سماح | .رفض | .حظر_خاص)\n"
-            "**🧨 | الـسيطرة :** (.تدمير | .تفليش | .تكرار)\n"
-            "**⚙️ | الـخدمة :** (.بينج | .ايدي | .فحص)\n"
-            "**— — — — — — — — — —**\n"
-            f"{CYBER_IDENTITY}"
-        )
-        await event.edit(menu)
+        await event.edit(f"**- أوامـر الـمتمرد 🦅 :**\n\n**🛡️ .سماح | .حظر_خاص**\n**🧨 .تدمير | .تفليش | .تكرار**\n\n{CYBER_IDENTITY}")
