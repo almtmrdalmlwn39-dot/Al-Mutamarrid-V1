@@ -14,20 +14,30 @@ BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messa
 # الهوية السيبرانية
 CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق، نـبرمجُ الـصمتَ ونـصنعُ الـفرق.. عـقولنا خـلفَ الـشاشاتِ تـبني، وأيـدينا فـي الأنـظمةِ تـحمي. 🦅💻🛡️**"
 
-# --- [ تحديث النبذة تلقائياً ] ---
-async def set_fixed_bio():
-    try:
-        my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
-        await client(functions.account.UpdateProfileRequest(about=my_bio))
-    except: pass
+# --- [ تحديث النبذة والوقت تلقائياً ] ---
+async def rebel_background_tasks():
+    while True:
+        try:
+            # 1. تحديث النبذة (Bio)
+            my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
+            await client(functions.account.UpdateProfileRequest(about=my_bio))
+            
+            # 2. تحديث الاسم بالوقت (الساعة التلقائية)
+            current_time = datetime.now(YEMEN_TZ).strftime("%I:%M")
+            await client(functions.account.UpdateProfileRequest(
+                first_name=f"Al-Mutamarrid | {current_time}"
+            ))
+        except: pass
+        await asyncio.sleep(60) # تحديث كل دقيقة
 
-client.loop.create_task(set_fixed_bio())
+client.loop.create_task(rebel_background_tasks())
 
 # --- [ 1. محرك الترحيب السيبراني (خاص) ] ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def pm_protection(event):
     sender = await event.get_sender()
-    if not sender or sender.bot or sender.contact or event.sender_id in approved_users or event.sender_id in warned_users:
+    # تنبيه: تم إزالة sender.contact لكي يرحب بالجميع حتى لو مخزنين عندك
+    if not sender or sender.bot or event.sender_id in approved_users or event.sender_id in warned_users:
         return
     if event.sender_id == (await client.get_me()).id:
         return
@@ -88,7 +98,7 @@ async def mutamarrid_omega_engine(event):
                 await client.send_message(chat, parts[2])
                 await asyncio.sleep(0.1)
 
-    # أوامر الخدمة (البينج والأيدي)
+    # أوامر الخدمة
     elif cmd == ".ايدي":
         await event.edit(f"**- مـعرف الـقاعدة: `{chat}`\n- مـعرف الـمطور: `{(await client.get_me()).id}`**")
 
@@ -98,8 +108,8 @@ async def mutamarrid_omega_engine(event):
         ms = (datetime.now() - start).microseconds / 1000
         await event.edit(f"**- سـرعة الـمعالجة : `{ms}`ms ⚡**")
 
-    # قائمة الأوامر (تستجيب بالهمزة وبدونها)
-    elif cmd in [".الاوامر", ".الاوامر"]:
+    # قائمة الأوامر
+    elif cmd in [".الاوامر", ".اوامر"]:
         menu = (
             "**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n"
             "**— — — — — — — — — —**\n"
