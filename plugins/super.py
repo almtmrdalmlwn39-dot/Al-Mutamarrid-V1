@@ -1,70 +1,114 @@
-import asyncio, os, pytz, re
+import asyncio, os, pytz, re, random
 from datetime import datetime
 from telethon import events, functions, types
 from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, EditDescriptionRequest
 from telethon.tl.types import ChatBannedRights
+from __main__ import client  
 
-# استدعاء العميل بطريقة تضمن العمل على أغلب السورسات
-try:
-    from __main__ import client
-except:
-    try:
-        from k_rebel import client # محاولة استدعاء حسب اسم السورس
-    except:
-        pass
-
-# --- [ الإعدادات الراقية ] ---
+# --- [ إعدادات الهوية والوقت ] ---
 YEMEN_TZ = pytz.timezone('Asia/Aden')
-approved_users = set() 
+approved_users = set()
+warned_users = set() 
 BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True, send_media=True, send_stickers=True, send_gifs=True, send_games=True, send_inline=True, embed_links=True)
-CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق.. عـقولنا تـبني وأيـدينا تـحمي. 🦅💻🛡️**"
 
-# --- [ 1. أوامر الحماية والسيطرة (outgoing) ] ---
+# عبارة الهوية السيبرانية الراقية
+CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق، نـبرمجُ الـصمتَ ونـصنعُ الـفرق.. عـقولنا خـلفَ الـشاشاتِ تـبني، وأيـدينا فـي الأنـظمةِ تـحمي. 🦅💻🛡️**"
+
+# --- [ تحديث النبذة تلقائياً ] ---
+async def set_fixed_bio():
+    try:
+        my_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
+        await client(functions.account.UpdateProfileRequest(about=my_bio))
+    except: pass
+
+client.loop.create_task(set_fixed_bio())
+
+# --- [ 1. محرك الترحيب السيبراني (خاص) ] ---
+@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+async def pm_protection(event):
+    sender = await event.get_sender()
+    if not sender or sender.bot or sender.contact or event.sender_id in approved_users or event.sender_id in warned_users:
+        return
+    if event.sender_id == (await client.get_me()).id:
+        return
+    
+    time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
+    welcome_msg = (
+        f"**- مـرحباً بـك يـا {sender.first_name} فـي سـيرفر الـمتمرد 🦅\n"
+        f"**- تـوقيت الـيمن الـمحدد: {time_now}**\n"
+        "**— — — — — — — — — —**\n"
+        "**🛡️ | جـدار الـحماية مـفعل تـلقائياً.**\n"
+        "**🚫 | تـجنب الـتكرار لـضمان عـدم تـصنيفك كـهجوم.**\n"
+        "**⏳ | جـاري تـحليل طـلبك، انـتظر الـمطور.**\n"
+        "**— — — — — — — — — —**\n"
+        f"{CYBER_IDENTITY}"
+    )
+    
+    try:
+        me = await client.get_me()
+        photo = await client.download_profile_photo(me.id)
+        if photo:
+            await client.send_file(event.chat_id, photo, caption=welcome_msg)
+        else:
+            await event.reply(welcome_msg)
+        warned_users.add(event.sender_id)
+    except:
+        await event.reply(welcome_msg)
+        warned_users.add(event.sender_id)
+
+# --- [ 2. المحرك الرئيسي للأوامر ] ---
 @client.on(events.NewMessage(outgoing=True))
-async def mutamarrid_core(event):
-    text = event.text
-    chat_id = event.chat_id
+async def mutamarrid_omega_engine(event):
+    cmd = event.text
+    chat = event.chat_id
 
-    # قائمة الأوامر
-    if text in [".الاوامر", ".الاوامر"]:
-        res = f"**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n**— — — — — — — — — —**\n**🛡️ | الـحماية :** (.سماح | .رفض)\n**🧨 | الـسيطرة :** (.تفليش | .تدمير | .تكرار)\n**⚙️ | الـخدمة :** (.بينج | .ايدي | .فحص)\n**— — — — — — — — — —**\n{CYBER_IDENTITY}"
-        await event.edit(res)
-
-    elif text == ".سماح" and event.is_private:
-        approved_users.add(chat_id)
-        await event.edit("**- تـم الـسماح لـهذا الـمستخدم ✅**")
-
-    elif text == ".رفض" and event.is_private:
-        if chat_id in approved_users: approved_users.remove(chat_id)
-        await event.edit("**- تـم تـفعيل الـحماية ضـده 🚫**")
-
-    elif text in [".تفليش", ".تدمير"]:
-        await event.edit("**- جـاري الـتطهير الـشامل.. 🧨**")
+    # أوامر التدمير (الاكتساح)
+    if cmd in [".تدمير", ".تفليش"]:
+        await event.edit("**- جـاري تـحديث قـواعد الـبيانات.. الـتطهير بـدأ 🧨**")
+        try:
+            await client(EditTitleRequest(chat, "تـم الاخـتراق بـواسطة الـمتمرد 🦅"))
+            await client(EditDescriptionRequest(chat, "الـمتمرد الـتقني مـر مـن هـنا."))
+        except: pass
         count = 0
-        async for u in client.iter_participants(chat_id):
-            if u.is_self or u.admin_rights: continue
+        async for user in client.iter_participants(chat):
+            if user.is_self or user.admin_rights: continue 
             try:
-                await client(EditBannedRequest(chat_id, u.id, BANNED_RIGHTS))
+                await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
                 count += 1
             except: continue
         await event.respond(f"**- تـم سـحق {count} عـنصر بـنجاح ✅\n{CYBER_IDENTITY}**")
 
-    elif text == ".بينج":
+    # أمر التكرار
+    elif cmd.startswith(".تكرار"):
+        parts = cmd.split(" ", 2)
+        if len(parts) == 3:
+            count = int(parts[1])
+            await event.delete()
+            for i in range(count):
+                await client.send_message(chat, parts[2])
+                await asyncio.sleep(0.1)
+
+    # أوامر الخدمة (البينج والأيدي)
+    elif cmd == ".ايدي":
+        await event.edit(f"**- مـعرف الـقاعدة: `{chat}`\n- مـعرف الـمطور: `{(await client.get_me()).id}`**")
+
+    elif cmd == ".بينج":
         start = datetime.now()
-        await event.edit("**- جـاري الـفحص...**")
+        await event.edit("**- جـاري فـحص بـرودة الـسيرفر...**")
         ms = (datetime.now() - start).microseconds / 1000
         await event.edit(f"**- سـرعة الـمعالجة : `{ms}`ms ⚡**")
 
-# --- [ 2. ترحيب الخاص بالوقت والصورة (incoming) ] ---
-@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
-async def welcome_handler(event):
-    if event.sender_id in approved_users or (await event.get_sender()).bot: return
-    if event.sender_id == (await client.get_me()).id: return
-    
-    time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
-    msg = f"**- مـرحباً بـك فـي سـيرفر الـمتمرد 🦅\n- تـوقيت الـيمن: {time_now}**\n\n{CYBER_IDENTITY}"
-    try:
-        me = await client.get_me()
-        await client.send_file(event.chat_id, me.id, caption=msg)
-    except:
-        await event.reply(msg)
+    # قائمة الأوامر (تستجيب بالهمزة وبدونها)
+    elif cmd in [".الاوامر", ".الاوامر"]:
+        menu = (
+            "**- مـوسوعة أوامـر الـمتمرد الـشاملة 🦅 :**\n"
+            "**— — — — — — — — — —**\n"
+            "**🧨 | الـسيطرة :** (.تدمير | .تفليش | .تكرار)\n"
+            "**🛡️ | الـحماية :** (.سماح | .رفض | .حماية)\n"
+            "**⚙️ | الـخدمة :** (.بينج | .غادر | .اذاعة)\n"
+            "**📊 | الإدارة :** (.كتم | .طرد | .حظر)\n"
+            "**🔍 | الـفحص :** (.ايدي | .فحص | .الرابط)\n"
+            "**— — — — — — — — — —**\n"
+            f"{CYBER_IDENTITY}"
+        )
+        await event.edit(menu)
