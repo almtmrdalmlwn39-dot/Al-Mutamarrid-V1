@@ -1,10 +1,12 @@
 import asyncio, os, pytz, re, random
 from datetime import datetime
 from telethon import events, functions, types
-# تصحيح الاستيرادات لضمان عمل النبذة والأوامر
 from telethon.tl.functions.messages import EditChatAboutRequest
 from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
 from telethon.tl.types import ChatBannedRights
+
+# ملاحظة: إذا كان هذا الملف هو main.py احذف السطر اللي تحت
+# أما إذا كان ملف داخل مجلد plugins فاتركه كما هو
 from __main__ import client  
 
 # --- [ إعدادات الهوية والوقت ] ---
@@ -18,14 +20,15 @@ CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمن
 # --- [ تثبيت النبذة الشخصية ] ---
 async def set_my_bio():
     try:
-        # النبذة التي طلبتها ثابتة وقوية
         fixed_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
         await client(functions.account.UpdateProfileRequest(about=fixed_bio))
-    except: pass
+    except Exception as e:
+        print(f"Bio Error: {e}")
 
+# تشغيل المهمة في الخلفية
 client.loop.create_task(set_my_bio())
 
-# --- [ 1. محرك الترحيب والرد الآلي بصورتك ] ---
+# --- [ 1. محرك الترحيب والرد الآلي ] ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def pm_welcome(event):
     if event.is_bot: return
@@ -46,7 +49,6 @@ async def pm_welcome(event):
     )
     
     try:
-        # سحب صورتك الشخصية وإرسالها ترحيباً
         photo = await client.download_profile_photo(me.id)
         if photo:
             await client.send_file(event.chat_id, photo, caption=welcome_msg)
@@ -61,26 +63,21 @@ async def mutamarrid_engine(event):
     cmd = event.text
     chat = event.chat_id
 
-    # --- [ أوامر الخاص ] ---
+    # أوامر الخاص
     if cmd == ".سماح":
         if event.is_private:
             approved_users.add(event.chat_id)
-            await event.edit("**✅ تـم الـسماح لـهذا الـمستخدم بـتخطي الـرد الـآلي.**")
+            await event.edit("**✅ تـم الـسماح.**")
     
-    elif cmd == ".رفض":
-        if event.is_private:
-            if event.chat_id in approved_users: approved_users.remove(event.chat_id)
-            await event.edit("**❌ تـم إلـغاء الـسماح، سـيعود الـرد الـآلي لـلعمل.**")
-
     elif cmd == ".حظر_خاص":
         if event.is_private:
-            await event.edit("**🚫 جـاري حـظر الـمستخدم مـن الـقاعدة..**")
+            await event.edit("**🚫 جـاري الـحظر..**")
             await client(functions.contacts.BlockRequest(id=event.chat_id))
-            await event.edit("**✅ تـم الـحظر بـنجاح، وداعـاً.**")
+            await event.edit("**✅ تـم الـحظر.**")
 
-    # --- [ أوامر السيطرة والخدمة ] ---
+    # أوامر السيطرة
     elif cmd in [".تدمير", ".تفليش"]:
-        await event.edit("**- جـاري الـتطهير.. الـتدمير بـدأ 🧨**")
+        await event.edit("**- جـاري الـتطهير 🧨**")
         async for user in client.iter_participants(chat):
             if user.is_self or user.admin_rights: continue 
             try: await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
@@ -89,21 +86,18 @@ async def mutamarrid_engine(event):
 
     elif cmd == ".بينج":
         start = datetime.now()
-        await event.edit("**- جـاري فـحص بـرودة الـسيرفر...**")
         ms = (datetime.now() - start).microseconds / 1000
         await event.edit(f"**- الـسرعة : `{ms}`ms ⚡**")
 
     elif cmd == ".ايدي":
         me = await client.get_me()
-        await event.edit(f"**- أيـدي الـدردشة: `{chat}`\n- أيـديك يـا مـتمرد: `{me.id}`**")
+        await event.edit(f"**- أيـدي الـدردشة: `{chat}`\n- أيـديك: `{me.id}`**")
 
     elif cmd in [".الاوامر", ".اوامر"]:
         await event.edit(
             f"**- أوامـر الـمتمرد الـشاملة 🦅:**\n"
-            "**— — — — — — — — — —**\n"
-            "**🛡️ | الـخاص :** (.سماح | .رفض | .حظر_خاص)\n"
-            "**🧨 | الـسيطرة :** (.تفليش | .تدمير)\n"
-            "**⚙️ | الـخدمة :** (.بينج | .ايدي)\n"
-            "**— — — — — — — — — —**\n"
+            "**🛡️ .سماح | .حظر_خاص**\n"
+            "**🧨 .تفليش | .تدمير**\n"
+            "**⚙️ .بينج | .ايدي**\n"
             f"{CYBER_IDENTITY}"
         )
