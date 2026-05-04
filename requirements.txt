@@ -4,3 +4,4 @@ requests
 pytz
 cryptg
 flask
+psutil
