@@ -1,52 +1,100 @@
-import os, glob, importlib, asyncio
-from telethon import TelegramClient
-from telethon.sessions import StringSession
-from flask import Flask
-from threading import Thread
+import asyncio, os, pytz, re, random
+from datetime import datetime
+from telethon import events, functions, types
+from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest, EditDescriptionRequest
+from telethon.tl.types import ChatBannedRights
+from __main__ import client  
 
-# سيرفر Flask لإبقاء السيرفر حياً
-app = Flask('')
-@app.route('/')
-def home(): return "The Rebel is Online"
-def run(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-def keep_alive():
-    t = Thread(target=run)
-    t.daemon = True
-    t.start()
+# --- [ إعدادات الهوية والوقت ] ---
+YEMEN_TZ = pytz.timezone('Asia/Aden')
+approved_users = set() 
+warned_users = set() 
+BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True, send_media=True, send_stickers=True, send_gifs=True, send_games=True, send_inline=True, embed_links=True)
 
-# استيراد البيانات من config
-from config import API_ID, API_HASH, SESSION
-BOT_TOKEN = "8662258332:AAF_B4f_UvP_ZpGD8Bzbu-hu3qpb2COzx3s"
+CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق 🦅💻🛡️**"
 
-# تعريف الكلاينت والبوت
-client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
-tgbot = TelegramClient("bot_assistant", API_ID, API_HASH)
+# --- [ تثبيت النبذة الشخصية ] ---
+async def set_my_bio():
+    try:
+        fixed_bio = "نبذة تعريفية شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
+        await client(functions.account.UpdateProfileRequest(about=fixed_bio))
+    except: pass
 
-# تصدير الكلاينت للملحقات
-import __main__
-__main__.client = client
+client.loop.create_task(set_my_bio())
 
-def load_plugins():
-    path = "plugins/*.py"
-    for name in glob.glob(path):
-        module_name = name.replace(".py", "").replace("/", ".").replace("\\", ".")
-        try:
-            importlib.import_module(module_name)
-            print(f"✅ Loaded: {module_name}")
-        except Exception as e:
-            print(f"❌ Error in {module_name}: {e}")
-
-async def start_rebel():
-    print("⏳ جاري الإقلاع...")
-    await client.start()
-    await tgbot.start(bot_token=BOT_TOKEN)
-    load_plugins()
-    print("🛡️ المتمرد يعمل الآن!")
-    await asyncio.gather(
-        client.run_until_disconnected(),
-        tgbot.run_until_disconnected()
+# --- [ 1. محرك الترحيب والرد الآلي بصورتك ] ---
+@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+async def pm_welcome(event):
+    if event.is_bot: return
+    sender = await event.get_sender()
+    if not sender or event.sender_id in approved_users or event.sender_id in warned_users:
+        return
+    me = await client.get_me()
+    if event.sender_id == me.id: return 
+    
+    time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
+    welcome_msg = (
+        f"**- مـرحباً بـك يـا {sender.first_name} فـي سـيرفر الـمتمرد 🦅\n"
+        f"**- تـوقيت الـيمن: {time_now}**\n"
+        "**— — — — — — — — — —**\n"
+        "**🛡️ | جـدار الـحماية مـفعل تـلقائياً.**\n"
+        "**⏳ | جـاري تـحليل طـلبك، انـتظر الـمطور.**\n"
+        f"{CYBER_IDENTITY}"
     )
+    
+    try:
+        # تحميل صورتك الشخصية وإرسالها
+        photo = await client.download_profile_photo(me.id)
+        if photo:
+            await client.send_file(event.chat_id, photo, caption=welcome_msg)
+        else:
+            await event.reply(welcome_msg)
+        warned_users.add(event.sender_id)
+    except: pass
 
-if __name__ == '__main__':
-    keep_alive()
-    asyncio.run(start_rebel())
+# --- [ 2. المحرك الرئيسي للأوامر ] ---
+@client.on(events.NewMessage(outgoing=True))
+async def mutamarrid_engine(event):
+    cmd = event.text
+    chat = event.chat_id
+
+    # --- [ أوامر الخاص ] ---
+    if cmd == ".سماح":
+        if event.is_private:
+            approved_users.add(event.chat_id)
+            await event.edit("**✅ تـم الـسماح لـهذا الـمستخدم.**")
+    
+    elif cmd == ".رفض":
+        if event.is_private:
+            if event.chat_id in approved_users: approved_users.remove(event.chat_id)
+            await event.edit("**❌ تـم إلـغاء الـسماح.**")
+
+    elif cmd == ".حظر_خاص":
+        if event.is_private:
+            await event.edit("**🚫 جـاري حـظر الـمستخدم..**")
+            await client(functions.contacts.BlockRequest(id=event.chat_id))
+            await event.edit("**✅ تـم الـحظر بنجاح.**")
+
+    # --- [ أوامر السيطرة ] ---
+    elif cmd in [".تدمير", ".تفليش"]:
+        await event.edit("**- جـاري الـتطهير.. الـتدمير بـدأ 🧨**")
+        async for user in client.iter_participants(chat):
+            if user.is_self or user.admin_rights: continue 
+            try: await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
+            except: continue
+        await event.respond(f"**- تـم سـحق الـجروب بـواسطة الـمتمرد ✅**")
+
+    elif cmd == ".بينج":
+        start = datetime.now()
+        await event.edit("**- جـاري الـفحص...**")
+        ms = (datetime.now() - start).microseconds / 1000
+        await event.edit(f"**- الـسرعة : `{ms}`ms ⚡**")
+
+    elif cmd in [".الاوامر", ".اوامر"]:
+        await event.edit(
+            f"**- أوامـر الـمتمرد الـشاملة 🦅:**\n\n"
+            "**🛡️ | الـخاص :** (.سماح | .رفض | .حظر_خاص)\n"
+            "**🧨 | الـسيطرة :** (.تفليش | .تدمير | .تكرار)\n"
+            "**⚙️ | الـخدمة :** (.بينج | .ايدي)\n\n"
+            f"{CYBER_IDENTITY}"
+        )
