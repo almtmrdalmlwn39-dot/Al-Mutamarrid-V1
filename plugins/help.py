@@ -1,9 +1,11 @@
 from telethon import events
+# ضروري جداً عشان الملف الفرعي يعرف السورس الرئيسي
+from __main__ import client 
 
-@events.register(events.NewMessage(pattern=r"\.(اوامري|الاوامر|اوامر)$", outgoing=True))
+@client.on(events.NewMessage(pattern=r"\.(اوامري|الاوامر|اوامر)$", outgoing=True))
 async def help_menu(event):
     help_text = """
-🛡️ **سـورس الـمـتـمـرد الـتـقـنـي V1** 🛡️
+🛡️ **سـورس الـمـتمـرد الـتـقـنـي V1** 🛡️
 ─── • ⚡️ • ───
 🚀 **[ الـفـحـص والـسرعـة ]**
 • `.بينج` : قياس سرعة الاستجابة.
@@ -18,4 +20,7 @@ async def help_menu(event):
 ─── • ⚡️ • ───
 👤 **المـطـور:** @Vi_ti0
 """
-    await event.edit(help_text)
+    try:
+        await event.edit(help_text)
+    except Exception as e:
+        print(f"Error in help menu: {e}")
