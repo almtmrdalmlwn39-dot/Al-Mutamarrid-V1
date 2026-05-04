@@ -5,18 +5,22 @@ from telethon import events, functions, types
 from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
 from telethon.tl.types import ChatBannedRights
 
-# --- [ الإصلاح هـنا ] ---
-# بدلاً من الاستدعاء المباشر الذي يسبب Error، نستخدم هذه الطريقة المضمونة
-try:
-    from main import client
-except:
-    from __main__ import client
+# --- [ إصلاح استدعاء المحرك ] ---
+import sys
+main_module = sys.modules.get('__main__')
+client = getattr(main_module, 'client', None)
+
+if client is None:
+    try:
+        from main import client
+    except:
+        from __main__ import client
 
 # --- [ الإعدادات ] ---
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 BANNED_RIGHTS = ChatBannedRights(until_date=None, view_messages=True, send_messages=True, send_media=True, send_stickers=True, send_gifs=True, send_games=True, send_inline=True, embed_links=True)
 
-CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق، نـبرمجُ الـصمتَ ونـصنعُ الـفرق.. عـقولنا خـلفَ الـشاشاتِ تـبني، وأيـدينا فـي الأنـظمةِ تـحمي. 🦅💻🛡️**"
+CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق 🦅💻🛡️**"
 
 # ذاكرة السورس
 welcomed_users = set() 
@@ -30,7 +34,6 @@ async def fast_security_engine(event):
     sender_id = event.sender_id
     if sender_id == me.id: return
 
-    # --- [ نظام الترحيب والتحذير الفوري ] ---
     if sender_id not in welcomed_users:
         sender = await event.get_sender()
         time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
@@ -43,7 +46,6 @@ async def fast_security_engine(event):
             f"{CYBER_IDENTITY}"
         )
         try:
-            # تم تبسيط الإرسال هنا لضمان السرعة في ريندر
             await event.reply(welcome_msg)
             welcomed_users.add(sender_id)
         except: pass
@@ -53,12 +55,12 @@ async def fast_security_engine(event):
         user_messages[sender_id].append(now)
         
         msg_count = len(user_messages[sender_id])
-        
-        if msg_count < 5:
-            await event.reply("**⚠️ هوي يا مستخدم! ممنوع التكرار. جدار حماية المتمرد يراقبك، انتظر الرد! 🚫**")
-        else:
-            await event.reply("**🚫 تم حظرك تلقائياً لتجاوزك حدود الأدب والتكرار المزعج!**")
-            await client(functions.contacts.BlockRequest(id=sender_id))
+        if msg_count > 4:
+            if msg_count < 7:
+                await event.reply("**⚠️ هوي يا مستخدم! ممنوع التكرار. جدار حماية المتمرد يراقبك! 🚫**")
+            else:
+                await event.reply("**🚫 تم حظرك تلقائياً لتجاوزك الحدود!**")
+                await client(functions.contacts.BlockRequest(id=sender_id))
 
 # --- [ 2. محرك الأوامر ] ---
 
@@ -67,7 +69,7 @@ async def reject_cmd(event):
     chat_id = event.chat_id
     welcomed_users.discard(chat_id)
     user_messages[chat_id] = []
-    await event.edit("**✅ تـم الـرفض. عيرجع يستلم الترحيب من جديد والتحذير بعده!**")
+    await event.edit("**✅ تـم الـرفض. عيرجع يستلم الترحيب من جديد!**")
 
 @client.on(events.NewMessage(pattern=r'^\.سماح$', outgoing=True))
 async def allow_cmd(event):
@@ -87,5 +89,6 @@ async def help_cmd(event):
 async def ping_cmd(event):
     start = datetime.now()
     await event.edit("**🚀 جـاري قـياس الـنبض...**")
-    ms = (datetime.now() - start).microseconds / 1000
+    end = datetime.now()
+    ms = (end - start).microseconds / 1000
     await event.edit(f"**⚡ سـرعة الـمتمرد: `{ms}`ms**")
