@@ -5,3 +5,4 @@ pytz
 cryptg
 flask
 psutil
+Pillow
