@@ -1,10 +1,9 @@
 import random
 from telethon import events
-import main
 
-client = main.client
+# استدعاء الكلاينت مباشرة من الملف الرئيسي
+from main import client 
 
-# --- مخزن الردود ---
 BOY_REPLIES = [
     "يا خبير بطل هبالة وهرج كلام يدخل الراس.",
     "يا صاحبي أنت محتاج إعادة ضبط مصنع لعقلك.",
@@ -26,7 +25,7 @@ def is_female(name):
     female_hints = ['ة', 'بنت', 'ام ']
     return any(hint in name for hint in female_hints)
 
-# --- أمر الزبج والقصف ---
+# تعديل النمط ليكون مرناً ويستجيب فوراً
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.(زبج|قصف)$"))
 async def smart_reply(event):
     if event.is_reply:
@@ -35,29 +34,14 @@ async def smart_reply(event):
             user = await reply.get_sender()
             full_name = (user.first_name or "") if user else ""
             
-            if is_female(full_name):
-                reply_msg = random.choice(GIRL_REPLIES)
-            else:
-                reply_msg = random.choice(BOY_REPLIES)
-                
+            msg = random.choice(GIRL_REPLIES if is_female(full_name) else BOY_REPLIES)
             await event.delete()
-            await reply.reply(f"**{reply_msg}**")
+            await reply.reply(f"**{msg}**")
         except:
             await event.edit(f"**{random.choice(BOY_REPLIES)}**")
     else:
-        # إذا كتبت الكلمة في الحافظة عيعدلها لرد عشوائي
         await event.edit(f"**{random.choice(BOY_REPLIES + GIRL_REPLIES)}**")
 
-# --- أمر عرض الأوامر ---
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.اوامر الزبج$"))
 async def show_help(event):
-    help_msg = """
-🦅 **أوامر الزبج - المتمرد التقني V1** 🦅
----
-- `.زبج` : بالرد على رسالة.
-- `.قصف` : بالرد على رسالة.
-- `.اوامر الزبج` : عرض هذه القائمة.
-
-💡 *السورس ذكي يفرق بين الولد والبنت.*
-    """
-    await event.edit(help_msg)
+    await event.edit("🦅 **أوامر الزبج:**\n- `.زبج` (بالرد)\n- `.قصف` (بالرد)\n- `.اوامر الزبج`")
