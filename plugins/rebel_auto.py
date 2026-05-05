@@ -1,57 +1,60 @@
-import asyncio
-from telethon import events, functions
+from telethon import events
+import main
 
-# محاولة جلب الكلاينت بأكثر من طريقة لضمان العمل
-try:
-    import main
-    client = main.client
-except:
-    from __main__ import client
+client = main.client
 
-AUTO_IDENTITY = "**- نـظام الـرد الـآلي | الـمتمرد الـتقني 🤖🦅**"
+# قائمة البيضاء (الأشخاص المسموح لهم)
 allowed_users = []
 
+# 1. نظام الرد التلقائي الذكي
 @client.on(events.NewMessage(incoming=True))
-async def private_handler(event):
-    # الرد فقط في الخاص وعلى الرسائل الواردة من الآخرين
+async def rebel_protection(event):
+    # الرد فقط في الخاص، ومن الآخرين، وإذا لم يكن مسموحاً له
     if event.is_private and not event.out:
         user_id = event.sender_id
+        
+        # إذا الشخص في قائمة السماح، البوت يسكت وما يرد
         if user_id in allowed_users:
             return
-
+            
         user = await event.get_sender()
-        # نص الترحيب والتحذير مع عبارة الأمن السيبراني
-        msg = f"""
+        if user and user.bot: return
+
+        protection_msg = f"""
 **- أهـلاً بـك فـي مـعقل الـمتمرد الـتقني 🛡️**
 — — — — — — — — — — —
 ◈ اسمك ⇐ {user.first_name}
 ◈ ايديك ⇐ `{user_id}`
 — — — — — — — — — — —
-**🛡️ في عالم المتمرد، الأمن ليس خياراً بل هوية. 
-أعتز بخصوصية عالمي، وأقدر تواصلك الراقي. 
-جاري معالجة طلبك.. كن صبوراً. 🦅**
+**🛡️ في عالم المتمرد، الأمن ليس خياراً بل هوية.**
+**أعتز بخصوصية عالمي، وأقدر تواصلك الراقي.**
+**جاري معالجة طلبك بأعلى مستويات الحماية.. كن صبوراً. 🦅**
 — — — — — — — — — — —
-{AUTO_IDENTITY}
+**- نـظام الـرد الـآلي | الـمتمرد الـتقني 🤖🦅**
 """
-        try:
-            # إرسال صورة بروفايله لإبهاره
-            photos = await client.get_profile_photos(user_id)
-            if photos:
-                await client.send_file(event.chat_id, photos[0], caption=msg)
-            else:
-                await event.reply(msg)
-        except:
-            await event.reply(msg)
+        await event.reply(protection_msg)
 
-# أوامر التحكم (سماح ورفض وقلك)
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(سماح|رفض|قلك)"))
-async def commands(event):
-    cmd = event.pattern_match.group(1)
-    if cmd == "سماح":
-        allowed_users.append(event.chat_id)
-        await event.edit("**✅ تـم الـسماح.**")
-    elif cmd == "رفض":
-        if event.chat_id in allowed_users: allowed_users.remove(event.chat_id)
-        await event.edit("**❌ تـم الـرفض.**")
-    elif cmd == "قلك":
-        await event.edit("**- قـال لـك الـمتمرد الـتقني :**\n**الـعقول الـعظيمة تـبني الـأكواد.. 🦅**")
+# 2. أمر السماح (.سماح)
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.سماح"))
+async def allow(event):
+    user_id = event.chat_id
+    if user_id not in allowed_users:
+        allowed_users.append(user_id)
+        await event.edit("**✅ تـم الـسماح لـهذا الـمستخدم بـتخطي الـحماية.**")
+    else:
+        await event.edit("**⚠️ الـمستخدم مـسموح لـه بـالفعل.**")
+
+# 3. أمر الرفض (.رفض)
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.رفض"))
+async def deny(event):
+    user_id = event.chat_id
+    if user_id in allowed_users:
+        allowed_users.remove(user_id)
+        await event.edit("**❌ تـم إلـغاء الـسماح، نـظام الـحماية يـراقب الآن.**")
+    else:
+        await event.edit("**⚠️ الـمستخدم غـير مـسموح لـه أصلاً.**")
+
+# 4. أمر الفحص (.فحص)
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.فحص"))
+async def check(event):
+    await event.edit("**🚀 الـمتمرد يـعمل بـنجاح، والأوامر جـاهزة!**")
