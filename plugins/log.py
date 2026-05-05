@@ -1,74 +1,74 @@
-from telethon import events, functions, types
-import os
 import asyncio
-# السطر الذهبي عشان يشتغل الملف الفرعي
+import os
+from telethon import events, functions, types
 from __main__ import client 
 
-# اسم الجروب الثابت لكي لا يتكرر الإنشاء
+# إعدادات المملكة
 GROUP_NAME = "سجل رسائل المتمرد التقني 📥"
+STORAGE_CACHE = {"id": None} # ذاكرة مؤقتة لتسريع الأداء
 
-async def get_log_group(bot_client):
-    """دالة ذكية للبحث عن الجروب أو إنشائه"""
-    async for dialog in bot_client.iter_dialogs():
+async def get_log_group():
+    """دالة ذكية تبحث عن الجروب وتخزن الأيدي لتوفير الجهد"""
+    if STORAGE_CACHE["id"]:
+        return STORAGE_CACHE["id"]
+        
+    async for dialog in client.iter_dialogs():
         if dialog.is_group and dialog.name == GROUP_NAME:
+            STORAGE_CACHE["id"] = dialog.id
             return dialog.id
     return None
 
 @client.on(events.NewMessage(pattern=r"\.انشاء تخزين", outgoing=True))
 async def create_fakhama_log(event):
     await event.edit("**جـاري تـأسـيـس مـمـلـكـة الـتـخـزيـن الـفـخـمـة... 🔥**")
-    
     try:
-        # التأكد إذا كان الجروب موجود مسبقاً
-        existing_group = await get_log_group(client)
+        existing_group = await get_log_group()
         if existing_group:
-            return await event.edit(f"**المملكة موجودة بالفعل يا متمرد! ✅**\n**الأيدي:** `{existing_group}`")
+            return await event.edit(f"**المملكة موجودة بالفعل! ✅\nالأيدي:** `{existing_group}`")
 
         me = await client.get_me()
-        
-        # 1. إنشاء الجروب
         result = await client(functions.channels.CreateChannelRequest(
             title=GROUP_NAME,
-            about="تخزين خاص ومشفر لرسائل المطور [المتمرد].",
+            about="تخزين مشفر وفخم لرسائل المتمرد التقني. 📡",
             megagroup=True
         ))
         
-        created_chat_id = result.chats[0].id
-        log_id = int(f"-100{created_chat_id}")
-        
-        # 2. وضع صورة الحساب للجروب
-        await event.edit("**جـاري وضـع لـمـسـة الـفـخـامة عـلـى الـجـروب... ✨**")
+        log_id = int(f"-100{result.chats[0].id}")
+        STORAGE_CACHE["id"] = log_id
+
+        # وضع لمسة الفخامة (الصورة)
         photos = await client.get_profile_photos(me.id)
         if photos:
-            photo_path = await client.download_media(photos[0])
+            path = await client.download_media(photos[0])
             await client(functions.channels.EditPhotoRequest(
-                channel=log_id,
-                photo=await client.upload_file(photo_path)
+                channel=log_id, photo=await client.upload_file(path)
             ))
-            if os.path.exists(photo_path): os.remove(photo_path)
+            if os.path.exists(path): os.remove(path)
 
-        # 3. رسالة الترحيب
-        await client.send_message(log_id, f"**‹ تـم تـأسـيـس مـمـلـكـة الـتـخـزيـن بـنـجـاح ✅ ›**\n**الـمـطـور:** [{me.first_name}](tg://user?id={me.id})")
-        
-        await event.edit(f"**تـم الإنـشـاء بـفـخـامـة! ✅**\n**الأيدي:** `{log_id}`")
-        
+        await client.send_message(log_id, "**✅ تـم تـفعيل بـروتوكول الـتخزين الـشامل.**")
+        await event.edit(f"**تـم الإنـشاء بـنجاح! 📥\nالأيدي:** `{log_id}`")
     except Exception as e:
-        await event.edit(f"**حدث خطأ أثناء الإنشاء:** {e}")
+        await event.edit(f"**⚠️ عـذراً مـتمرد، حـدث خـطأ:** {e}")
 
-# --- دالة تحويل الرسائل التلقائية ---
+# --- نظام التخزين السيبراني اللحظي ---
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def auto_log_messages(event):
-    if event.is_bot: return
-    sender = await event.get_sender()
-    if not sender: return
+    # لا نخزن رسائل البوتات أو القنوات، فقط الأشخاص
+    if event.is_private and not event.is_bot:
+        try:
+            log_id = await get_log_group()
+            if not log_id:
+                return # الجروب مش موجود
 
-    # البحث عن الجروب لإرسال الرسالة إليه
-    log_id = await get_log_group(client)
-    if not log_id: return
-
-    try:
-        log_caption = f"**📥 رسالة من: [{sender.first_name}](tg://user?id={sender.id})\n🆔 الأيدي: `{sender.id}`**"
-        await client.send_message(log_id, log_caption)
-        await client.forward_messages(log_id, event.message)
-    except:
-        pass
+            sender = await event.get_sender()
+            name = sender.first_name or "مستخدم مخفي"
+            
+            # إرسال معلومات المرسل قبل التوجيه (اختياري للفخامة)
+            info_text = f"👤 **مـرسل جديد:** [{name}](tg://user?id={event.sender_id})\n🆔 **الأيدي:** `{event.sender_id}`"
+            
+            # توجيه الرسالة فوراً للمملكة
+            await client.send_message(log_id, info_text)
+            await event.forward_to(log_id)
+            
+        except Exception as e:
+            print(f"❌ خطأ في نظام التخزين: {e}")
