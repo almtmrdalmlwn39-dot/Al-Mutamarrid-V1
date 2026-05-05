@@ -52,7 +52,7 @@ async def sawa_info(event):
         f"**— — — — — — — — — —**\n"
         f"**- الـاسم:** `{me.first_name}`\n"
         f"**- الآيـدي:** `{me.id}`\n"
-        f"**- الـمطور:** @almtmrdalmlwn39\n"
+        f"**- الـمطور:** @A0_O7"
         f"**— — — — — — — — — —**\n"
         f"{SAWA_IDENTITY}"
     )
