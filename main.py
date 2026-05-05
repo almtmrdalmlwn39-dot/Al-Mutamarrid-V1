@@ -18,7 +18,7 @@ client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 FIXED_NAME = "فــرانــكَـَۄ|| 𝗟َِ𝗢َِ𝗿َِ𝗶َِ𝗙َِ𝒆َِل↜͟͞💸⁩"
 MY_BIO = "نبذة تعريفية: شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
-CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق، نـبرمجُ الـصمتَ ونـصنعُ الـفرق.. عـقولنا خـلفَ الـشاشاتِ تـبني، وأيـدينا فـي الأنـظمةِ تـحمي. 🦅💻🛡️**"
+CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق 🦅💻🛡️**"
 
 welcomed_users = set()
 
@@ -36,8 +36,7 @@ async def update_profile_loop():
                 first_name=f"{FIXED_NAME} | {z_time}",
                 about=f"{MY_BIO} | {z_time}"
             ))
-        except Exception as e:
-            print(f"Update Error: {e}")
+        except: pass
         await asyncio.sleep(60)
 
 # --- [ 2. محرك الرد التلقائي بالخاص ] ---
@@ -46,38 +45,16 @@ async def cyber_welcome(event):
     if event.is_bot: return
     me = await client.get_me()
     if event.sender_id == me.id: return
-    
     if event.sender_id not in welcomed_users:
-        sender = await event.get_sender()
         time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
         z_time = custom_nums(time_now)
-        welcome_msg = (
-            f"**- مـرحباً بـك يـا {sender.first_name} فـي سـيرفر الـمتمرد 🦅\n"
-            f"**- تـوقيت الـيمن الـمحدد: {z_time}**\n"
-            "**— — — — — — — — — —**\n"
-            f"{CYBER_IDENTITY}"
-        )
+        welcome_msg = f"**- مـرحباً بـك فـي سـيرفر الـمتمرد 🦅\n- الـوقت: {z_time}**\n\n{CYBER_IDENTITY}"
         try:
-            photo = await client.download_profile_photo(me.id)
-            if photo:
-                await client.send_file(event.chat_id, photo, caption=welcome_msg)
-                if os.path.exists(photo): os.remove(photo)
-            else:
-                await event.reply(welcome_msg)
+            await event.reply(welcome_msg)
             welcomed_users.add(event.sender_id)
         except: pass
 
-# --- [ 3. محرك الأوامر والتفليش ] ---
-@client.on(events.NewMessage(outgoing=True))
-async def commands_engine(event):
-    text = event.raw_text
-    if text == ".حالة":
-        start = time.time()
-        await client(functions.PingRequest(ping_id=0))
-        ping_ms = round((time.time() - start) * 1000)
-        await event.edit(f"**🚀 الـمتمرد نـشط وبـكامل قـوته:**\n**⚡ الـسرعة: `{custom_nums(str(ping_ms))}` ms**\n\n{CYBER_IDENTITY}")
-
-# --- [ الإقلاع الشامل - تم تعديله لحل مشكلة Loop ] ---
+# --- [ الإقلاع ] ---
 async def start_mared():
     await client.start()
     print(f"🦅 الـمتمرد {FIXED_NAME} نـشط الآن..")
@@ -85,9 +62,9 @@ async def start_mared():
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
+    # حل جذري لمشكلة Loop في ريندر
     try:
+        asyncio.run(start_mared())
+    except:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(start_mared())
-    except RuntimeError:
-        # حل لمشكلة No current event loop
-        asyncio.run(start_mared())
