@@ -3,11 +3,11 @@ from datetime import datetime
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
-import config
+import config # استدعاء ملف الإعدادات
 
-# إعداد العميل باستخدام StringSession حصراً لتجنب EOFError
-SESSION = os.environ.get("TERMUX_SESSION") or ""
-client = TelegramClient(StringSession(SESSION), config.API_ID, config.API_HASH)
+# جلب الجلسة المعرفة في ملف config
+SESSION_STRING = config.SESSION 
+client = TelegramClient(StringSession(SESSION_STRING), config.API_ID, config.API_HASH)
 
 def z_nums(text):
     n = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'}
@@ -34,15 +34,14 @@ def load_plugins():
             print(f"❌ Error in {plugin_name}: {e}")
 
 async def start_mared():
-    # استخدام start() بدون وسائط يمنع طلب الكود في ريندر
+    # الدخول بالجلسة يمنع طلب الرقم (EOFError)
     await client.start()
-    print("🦅 الـمتمرد فــرانــكَـَۄ نـشط الآن..")
+    print("🦅 الـمتمرد..")
     asyncio.create_task(profile_engine())
     load_plugins()
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    # حل مشكلة Event Loop في بيئة Render
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
