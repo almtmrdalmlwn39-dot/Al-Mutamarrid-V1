@@ -5,6 +5,24 @@ from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 import config # استدعاء ملف الإعدادات
 
+# --- بداية كود إرضاء منصة ريندر (إضافة مهمة) ---
+from flask import Flask
+import threading
+
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return "The Rebel UserBot is Live! 🦅"
+
+def run_flask():
+    # ريندر يستخدم المنفذ 10000 بشكل افتراضي
+    app.run(host='0.0.0.0', port=10000)
+
+# تشغيل السيرفر في خيط منفصل عشان ما يعطل السورس
+threading.Thread(target=run_flask, daemon=True).start()
+# --- نهاية كود ريندر ---
+
 # جلب الجلسة المعرفة في ملف config
 SESSION_STRING = config.SESSION 
 client = TelegramClient(StringSession(SESSION_STRING), config.API_ID, config.API_HASH)
@@ -34,16 +52,14 @@ def load_plugins():
             print(f"❌ Error in {plugin_name}: {e}")
 
 async def start_mared():
-    # الدخول بالجلسة يمنع طلب الرقم (EOFError)
     await client.start()
-    print("🦅 الـمتمرد..")
+    print("🦅 الـمتمرد يـحلق الآن..")
     asyncio.create_task(profile_engine())
     load_plugins()
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(start_mared())
     except KeyboardInterrupt:
