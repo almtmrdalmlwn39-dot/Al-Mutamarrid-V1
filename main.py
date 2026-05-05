@@ -3,9 +3,9 @@ from datetime import datetime
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
-import config # استدعاء ملف الإعدادات
+import config 
 
-# --- بداية كود إرضاء منصة ريندر (إضافة مهمة) ---
+# --- كود إرضاء منصة ريندر ---
 from flask import Flask
 import threading
 
@@ -16,14 +16,14 @@ def health_check():
     return "The Rebel UserBot is Live! 🦅"
 
 def run_flask():
-    # ريندر يستخدم المنفذ 10000 بشكل افتراضي
-    app.run(host='0.0.0.0', port=10000)
+    try:
+        app.run(host='0.0.0.0', port=10000)
+    except: pass
 
-# تشغيل السيرفر في خيط منفصل عشان ما يعطل السورس
+# تشغيل السيرفر في خيط منفصل
 threading.Thread(target=run_flask, daemon=True).start()
 # --- نهاية كود ريندر ---
 
-# جلب الجلسة المعرفة في ملف config
 SESSION_STRING = config.SESSION 
 client = TelegramClient(StringSession(SESSION_STRING), config.API_ID, config.API_HASH)
 
@@ -43,6 +43,9 @@ async def profile_engine():
         await asyncio.sleep(60)
 
 def load_plugins():
+    # تأكد أن مجلد plugins موجود
+    if not os.path.exists("plugins"):
+        os.makedirs("plugins")
     for name in glob.glob("plugins/*.py"):
         plugin_name = name.replace("/", ".").replace("\\", ".").replace(".py", "")
         try:
@@ -59,8 +62,10 @@ async def start_mared():
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
+    # هذه الطريقة تمنع خطأ الـ RuntimeError نهائياً
     try:
-        loop.run_until_complete(start_mared())
-    except KeyboardInterrupt:
+        asyncio.run(start_mared())
+    except (KeyboardInterrupt, SystemExit):
         pass
+    except Exception as e:
+        print(f"🚨 Fatal Error: {e}")
