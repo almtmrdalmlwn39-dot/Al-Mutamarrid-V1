@@ -1,71 +1,56 @@
-import asyncio, os, pytz, re, random, time
+import asyncio, os, pytz, time, glob, importlib
 from datetime import datetime
-from collections import defaultdict
-from telethon import TelegramClient, events, functions, types
+from telethon import TelegramClient, events
 from telethon.sessions import StringSession
-from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.types import ChatBannedRights
+import config # ملف الإعدادات
 
-# --- [ إعدادات الربط ] ---
-API_ID = 20585941
-API_HASH = "4c8b6debbee47ab644c82305487f34b2"
+# إعداد العميل وجلب الجلسة
 SESSION = os.environ.get("TERMUX_SESSION") or ""
+client = TelegramClient(StringSession(SESSION), config.API_ID, config.API_HASH)
 
-client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
+# زخرفة الأرقام للساعة
+def z_nums(text):
+    n = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'}
+    return "".join(n.get(c, c) for c in text)
 
-# --- [ الهوية الشخصية الفخمة ] ---
-YEMEN_TZ = pytz.timezone('Asia/Aden')
-FIXED_NAME = "فــرانــكَـَۄ|| 𝗟َِ𝗢َِ𝗿َِ𝗶َِ𝗙َِ𝒆َِل↜͟͞💸⁩"
-MY_BIO = "نبذة تعريفية: شخص مغرم بنفسه ولايتنازل لـ خلق الله ابدا"
-CYBER_IDENTITY = "**- نـحنُ حـماةُ الـخصوصيةِ فـي زمنِ الاختراق 🦅💻🛡️**"
-
-welcomed_users = set()
-
-def custom_nums(text):
-    nums = {'0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵'}
-    return "".join(nums.get(c, c) for c in text)
-
-# --- [ 1. محرك تحديث الاسم والنبذة والساعة ] ---
-async def update_profile_loop():
+# محرك تحديث الساعة والنبذة التلقائي
+async def profile_engine():
     while True:
         try:
-            current_time = datetime.now(YEMEN_TZ).strftime("%I:%M")
-            z_time = custom_nums(current_time)
+            now = datetime.now(config.YEMEN_TZ).strftime("%I:%M")
+            tm = z_nums(now)
             await client(UpdateProfileRequest(
-                first_name=f"{FIXED_NAME} | {z_time}",
-                about=f"{MY_BIO} | {z_time}"
+                first_name=f"{config.FIXED_NAME} | {tm}",
+                about=f"{config.MY_BIO} | {tm}"
             ))
         except: pass
         await asyncio.sleep(60)
 
-# --- [ 2. محرك الرد التلقائي بالخاص ] ---
-@client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
-async def cyber_welcome(event):
-    if event.is_bot: return
-    me = await client.get_me()
-    if event.sender_id == me.id: return
-    if event.sender_id not in welcomed_users:
-        time_now = datetime.now(YEMEN_TZ).strftime("%I:%M %p")
-        z_time = custom_nums(time_now)
-        welcome_msg = f"**- مـرحباً بـك فـي سـيرفر الـمتمرد 🦅\n- الـوقت: {z_time}**\n\n{CYBER_IDENTITY}"
-        try:
-            await event.reply(welcome_msg)
-            welcomed_users.add(event.sender_id)
-        except: pass
+# --- [ محرك تحميل الأوامر الإضافية ] ---
+def load_plugins():
+    # يبحث عن كل ملفات .py داخل مجلد plugins ويشغلها
+    path = "plugins/*.py"
+    files = glob.glob(path)
+    for name in files:
+        plugin_name = name.replace("/", ".").replace("\\", ".").replace(".py", "")
+        importlib.import_module(plugin_name)
+        print(f"✅ تم تفعيل الأوامر من: {plugin_name}")
 
-# --- [ الإقلاع ] ---
+# الإقلاع الرئيسي
 async def start_mared():
     await client.start()
-    print(f"🦅 الـمتمرد {FIXED_NAME} نـشط الآن..")
-    asyncio.create_task(update_profile_loop())
+    print("🦅 الـمتمرد فــرانــكَـَۄ نـشط الآن..")
+    
+    # تشغيل محرك الساعة في الخلفية
+    asyncio.create_task(profile_engine())
+    
+    # تحميل أوامر الإدارة (admin.py)
+    load_plugins()
+    
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    # حل جذري لمشكلة Loop في ريندر
-    try:
-        asyncio.run(start_mared())
-    except:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(start_mared())
-
+    # حل مشكلة Event Loop في بيئة Render
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(start_mared())
