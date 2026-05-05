@@ -1,4 +1,4 @@
-import random # تم تصحيح حرف الـ i إلى صغير ليعمل الكود
+import random
 from telethon import events
 import main
 
@@ -21,13 +21,12 @@ GIRL_REPLIES = [
     "واصلِ، مخزون الضحك عندي محتاج نكتة جديدة."
 ]
 
-# دالة تخمين الجنس
 def is_female(name):
     if not name: return False
     female_hints = ['ة', 'بنت', 'ام ']
     return any(hint in name for hint in female_hints)
 
-# --- كود القصف والزبج ---
+# --- أمر الزبج والقصف ---
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.(زبج|قصف)$"))
 async def smart_reply(event):
     if event.is_reply:
@@ -46,19 +45,19 @@ async def smart_reply(event):
         except:
             await event.edit(f"**{random.choice(BOY_REPLIES)}**")
     else:
-        # إذا جربت في الحافظة بدون رد
-        reply_msg = random.choice(BOY_REPLIES + GIRL_REPLIES)
-        await event.edit(f"**{reply_msg}**")
+        # إذا كتبت الكلمة في الحافظة عيعدلها لرد عشوائي
+        await event.edit(f"**{random.choice(BOY_REPLIES + GIRL_REPLIES)}**")
 
-# --- كود عرض الأوامر (إضافة جديدة) ---
+# --- أمر عرض الأوامر ---
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.اوامر الزبج$"))
-async def show_zabj_help(event):
-    help_text = """
-🦅 **أوامر الزبج للمتمرد التقني:**
-- `.زبج` : بالرد على شخص (يقصف جبهته).
-- `.قصف` : نفس عمل زبج.
-- `.اوامر الزبج` : لعرض هذه القائمة.
+async def show_help(event):
+    help_msg = """
+🦅 **أوامر الزبج - المتمرد التقني V1** 🦅
+---
+- `.زبج` : بالرد على رسالة.
+- `.قصف` : بالرد على رسالة.
+- `.اوامر الزبج` : عرض هذه القائمة.
 
-💡 *ملاحظة: السورس يفرق بين الولد والبنت تلقائياً.*
+💡 *السورس ذكي يفرق بين الولد والبنت.*
     """
-    await event.edit(help_text)
+    await event.edit(help_msg)
