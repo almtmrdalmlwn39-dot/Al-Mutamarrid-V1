@@ -3,18 +3,17 @@ from datetime import datetime
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
-import config # ملف الإعدادات
+import config # تأكد من وجود ملف config.py
 
-# إعداد العميل وجلب الجلسة
+# إعداد العميل
 SESSION = os.environ.get("TERMUX_SESSION") or ""
 client = TelegramClient(StringSession(SESSION), config.API_ID, config.API_HASH)
 
-# زخرفة الأرقام للساعة
 def z_nums(text):
     n = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'}
     return "".join(n.get(c, c) for c in text)
 
-# محرك تحديث الساعة والنبذة التلقائي
+# محرك تحديث الساعة والنبذة
 async def profile_engine():
     while True:
         try:
@@ -27,30 +26,39 @@ async def profile_engine():
         except: pass
         await asyncio.sleep(60)
 
-# --- [ محرك تحميل الأوامر الإضافية ] ---
+# محرك تحميل ملفات الأوامر (Plugins)
 def load_plugins():
-    # يبحث عن كل ملفات .py داخل مجلد plugins ويشغلها
     path = "plugins/*.py"
     files = glob.glob(path)
     for name in files:
         plugin_name = name.replace("/", ".").replace("\\", ".").replace(".py", "")
-        importlib.import_module(plugin_name)
-        print(f"✅ تم تفعيل الأوامر من: {plugin_name}")
+        try:
+            importlib.import_module(plugin_name)
+            print(f"✅ تم تحميل: {plugin_name}")
+        except Exception as e:
+            print(f"❌ خطأ في تحميل {plugin_name}: {e}")
 
-# الإقلاع الرئيسي
 async def start_mared():
     await client.start()
     print("🦅 الـمتمرد فــرانــكَـَۄ نـشط الآن..")
     
-    # تشغيل محرك الساعة في الخلفية
+    # تشغيل الساعة وتحميل الأوامر
     asyncio.create_task(profile_engine())
-    
-    # تحميل أوامر الإدارة (admin.py)
     load_plugins()
     
     await client.run_until_disconnected()
 
+# --- [ الجزء المعدل لحل مشكلة RuntimeError ] ---
 if __name__ == '__main__':
-    # حل مشكلة Event Loop في بيئة Render
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_mared())
+    try:
+        # المحاولة الأولى باستخدام asyncio.run
+        asyncio.run(start_mared())
+    except RuntimeError:
+        # حل بديل في حال وجود حلقة تعمل بالفعل (كما يحدث في Render)
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(start_mared())
+        else:
+            loop.run_until_complete(start_mared())
+    except (KeyboardInterrupt, SystemExit):
+        pass
