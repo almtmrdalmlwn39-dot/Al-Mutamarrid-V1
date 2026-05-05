@@ -5,7 +5,7 @@ from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 import config
 
-# إعداد العميل
+# إعداد العميل باستخدام StringSession حصراً لتجنب EOFError
 SESSION = os.environ.get("TERMUX_SESSION") or ""
 client = TelegramClient(StringSession(SESSION), config.API_ID, config.API_HASH)
 
@@ -31,17 +31,18 @@ def load_plugins():
             importlib.import_module(plugin_name)
             print(f"✅ Loaded: {plugin_name}")
         except Exception as e:
-            print(f"❌ Error loading {plugin_name}: {e}")
+            print(f"❌ Error in {plugin_name}: {e}")
 
 async def start_mared():
+    # استخدام start() بدون وسائط يمنع طلب الكود في ريندر
     await client.start()
     print("🦅 الـمتمرد فــرانــكَـَۄ نـشط الآن..")
     asyncio.create_task(profile_engine())
     load_plugins()
     await client.run_until_disconnected()
 
-# --- [ حل مشكلة RuntimeError النهائي ] ---
 if __name__ == '__main__':
+    # حل مشكلة Event Loop في بيئة Render
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
