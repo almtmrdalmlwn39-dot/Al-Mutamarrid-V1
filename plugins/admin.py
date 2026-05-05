@@ -1,13 +1,16 @@
 from telethon import events
-from __main__ import client
+# استدعاء العميل من ملف main الأساسي وليس من __main__
+import main 
+client = main.client
 
 # 1. أمر استخراج المعلومات (بالرد)
 @client.on(events.NewMessage(pattern=r'\.معلومات', outgoing=True))
 async def get_info(event):
     if event.is_reply:
         reply = await event.get_reply_message()
-        user = await client.get_entity(reply.sender_id)
-        info_text = f"""
+        try:
+            user = await client.get_entity(reply.sender_id)
+            info_text = f"""
 🛡️ **معلومات المستخدم:**
 ─── • ⚡️ • ───
 🆔 **الايدي:** `{user.id}`
@@ -16,7 +19,9 @@ async def get_info(event):
 🛡️ **الحساب:** {"بوت" if user.bot else "شخصي"}
 ─── • ⚡️ • ───
 """
-        await event.edit(info_text)
+            await event.edit(info_text)
+        except Exception as e:
+            await event.edit(f"⚠️ خطأ: {e}")
     else:
         await event.edit("**⚠️ يرجى الرد على الشخص لجلب معلوماته!**")
 
@@ -33,6 +38,9 @@ async def delete_msg(event):
 # 3. أمر الطرد (للمشرفين)
 @client.on(events.NewMessage(pattern=r'\.طرد', outgoing=True))
 async def kick_user(event):
+    if not event.is_group:
+        return await event.edit("**⚠️ هذا الأمر يستخدم في المجموعات فقط!**")
+    
     if event.is_reply:
         reply = await event.get_reply_message()
         try:
