@@ -1,11 +1,11 @@
-import asyncio, os, pytz, glob, importlib
+import asyncio, os, pytz, glob, importlib, sys
 from datetime import datetime
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 import config
 
-# تعريف العميل عالمياً لسهولة الاستدعاء
+# إعداد العميل
 SESSION = os.environ.get("TERMUX_SESSION") or ""
 client = TelegramClient(StringSession(SESSION), config.API_ID, config.API_HASH)
 
@@ -24,12 +24,14 @@ async def profile_engine():
         except: pass
         await asyncio.sleep(60)
 
-# محرك تحميل الإضافات الذكي
 def load_plugins():
     for name in glob.glob("plugins/*.py"):
         plugin_name = name.replace("/", ".").replace("\\", ".").replace(".py", "")
-        importlib.import_module(plugin_name)
-        print(f"✅ تم تفعيل: {plugin_name}")
+        try:
+            importlib.import_module(plugin_name)
+            print(f"✅ Loaded: {plugin_name}")
+        except Exception as e:
+            print(f"❌ Error loading {plugin_name}: {e}")
 
 async def start_mared():
     await client.start()
@@ -38,7 +40,11 @@ async def start_mared():
     load_plugins()
     await client.run_until_disconnected()
 
+# --- [ حل مشكلة RuntimeError النهائي ] ---
 if __name__ == '__main__':
-    # الحل الجذري لمشكلة الـ Loop في ريندر
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_mared())
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(start_mared())
+    except KeyboardInterrupt:
+        pass
