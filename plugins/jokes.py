@@ -1,10 +1,10 @@
-import random
+import random # تم تصحيح حرف الـ i إلى صغير ليعمل الكود
 from telethon import events
 import main
 
 client = main.client
 
-# --- مخزن الردود (نفس حقك بالضبط) ---
+# --- مخزن الردود ---
 BOY_REPLIES = [
     "يا خبير بطل هبالة وهرج كلام يدخل الراس.",
     "يا صاحبي أنت محتاج إعادة ضبط مصنع لعقلك.",
@@ -21,36 +21,44 @@ GIRL_REPLIES = [
     "واصلِ، مخزون الضحك عندي محتاج نكتة جديدة."
 ]
 
-# دالة تخمين الجنس (نفس حقك)
+# دالة تخمين الجنس
 def is_female(name):
     if not name: return False
-    female_hints = ['ة', 'بنت', 'ام '] # شلنا الأسماء المحددة وخلينا التاء المربوطة والكلمات العامة
+    female_hints = ['ة', 'بنت', 'ام ']
     return any(hint in name for hint in female_hints)
 
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.(زبج|قصف)"))
+# --- كود القصف والزبج ---
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(زبج|قصف)$"))
 async def smart_reply(event):
-    reply_msg = ""
-    
     if event.is_reply:
-        # 1. جلب الرسالة المردود عليها
-        reply = await event.get_reply_message()
-        
-        # 2. التعديل الجوهري هنا (بدل get_entity نستخدم get_sender)
-        # هذا السطر أسرع وما يعلق الكود
-        user = await reply.get_sender()
-        
-        full_name = (user.first_name or "") if user else ""
-        
-        # 3. فحص الجنس واختيار الرد
-        if is_female(full_name):
-            reply_msg = random.choice(GIRL_REPLIES)
-        else:
-            reply_msg = random.choice(BOY_REPLIES)
+        try:
+            reply = await event.get_reply_message()
+            user = await reply.get_sender()
+            full_name = (user.first_name or "") if user else ""
             
-        await event.delete()
-        # 4. الرد المباشر (Reply) ليكون القصف دقيق
-        await reply.reply(f"**{reply_msg}**")
+            if is_female(full_name):
+                reply_msg = random.choice(GIRL_REPLIES)
+            else:
+                reply_msg = random.choice(BOY_REPLIES)
+                
+            await event.delete()
+            await reply.reply(f"**{reply_msg}**")
+        except:
+            await event.edit(f"**{random.choice(BOY_REPLIES)}**")
     else:
-        # إذا كتبت الأمر في الحافظة بدون "رد"
+        # إذا جربت في الحافظة بدون رد
         reply_msg = random.choice(BOY_REPLIES + GIRL_REPLIES)
         await event.edit(f"**{reply_msg}**")
+
+# --- كود عرض الأوامر (إضافة جديدة) ---
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.اوامر الزبج$"))
+async def show_zabj_help(event):
+    help_text = """
+🦅 **أوامر الزبج للمتمرد التقني:**
+- `.زبج` : بالرد على شخص (يقصف جبهته).
+- `.قصف` : نفس عمل زبج.
+- `.اوامر الزبج` : لعرض هذه القائمة.
+
+💡 *ملاحظة: السورس يفرق بين الولد والبنت تلقائياً.*
+    """
+    await event.edit(help_text)
