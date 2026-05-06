@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: al-mutamarrid-userbot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: API_ID
+        sync: false
+        placeholder: "أدخل API_ID الخاص بك"
+      - key: API_HASH
+        sync: false
+        placeholder: "أدخل API_HASH الخاص بك"
+      - key: SESSION
+        sync: false
+        placeholder: "أدخل كود الجلسة (String Session)"
+      - key: PYTHON_VERSION
+        value: 3.10.0
