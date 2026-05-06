@@ -1,52 +1,56 @@
-from telethon import events
+from telethon import events, functions
+import asyncio
+from datetime import datetime
 import main
 
 client = main.client
-
-# قائمة السماح (الأشخاص الذين لن يرد عليهم البوت)
 allowed_users = []
 
-# نظام الرد التلقائي (محدث ليرد على الجميع بما فيهم حسابك الثاني)
+# 1. نظام الرد التلقائي (الترحيب)
 @client.on(events.NewMessage(incoming=True))
-async def rebel_protection(event):
-    # الرد فقط في الخاص (Private) وبشرط ألا تكون الرسالة صادرة منك (not event.out)
+async def auto_reply(event):
     if event.is_private and not event.out:
-        user_id = event.sender_id
-        
-        # إذا قمت بعمل .سماح لهذا الحساب، لن يرد البوت
-        if user_id in allowed_users:
-            return
-            
+        if event.sender_id in allowed_users: return
         user = await event.get_sender()
+        if user and user.bot: return
         
-        # نص الترحيب المنسق الذي طلبته
-        protection_msg = f"""
+        msg = f"""
 **- أهـلاً بـك فـي مـعقل الـمتمرد الـتقني 🛡️**
 — — — — — — — — — — —
-◈ اسمك ⇐ {user.first_name if user else 'يا متمرد'}
-◈ ايديك ⇐ `{user_id}`
+◈ اسمك ⇐ {user.first_name}
+◈ ايديك ⇐ `{event.sender_id}`
 — — — — — — — — — — —
 **🛡️ في عالم المتمرد، الأمن ليس خياراً بل هوية.**
-**أعتز بخصوصية عالمي، وأقدر تواصلك الراقي.**
+**جاري معالجة طلبك.. كن صبوراً. 🦅**
 — — — — — — — — — — —
 **- نـظام الـرد الـآلي | الـمتمرد الـتقني 🤖🦅**
 """
-        # الرد المباشر
-        await event.reply(protection_msg)
+        await event.reply(msg)
 
-# أوامر التحكم (تعمل من حسابك الأساسي فقط)
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(سماح|رفض|فحص|قلك)"))
-async def rebel_commands(event):
+# 2. أوامر التحكم (سماح، رفض، فحص)
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(سماح|رفض|فحص)"))
+async def control(event):
     cmd = event.pattern_match.group(1)
-    user_id = event.chat_id
-    
     if cmd == "سماح":
-        if user_id not in allowed_users: allowed_users.append(user_id)
-        await event.edit("**✅ تـم الـسماح لـهذا الـمستخدم.**")
+        allowed_users.append(event.chat_id)
+        await event.edit("**✅ تـم الـسماح.**")
     elif cmd == "رفض":
-        if user_id in allowed_users: allowed_users.remove(user_id)
-        await event.edit("**❌ تـم إلـغاء الـسماح، الـحماية تـعمل!**")
+        if event.chat_id in allowed_users: allowed_users.remove(event.chat_id)
+        await event.edit("**❌ تـم الـرفض.**")
     elif cmd == "فحص":
-        await event.edit("**🚀 الـمتمرد يـحلق بـنجاح!**")
-    elif cmd == "قلك":
-        await event.edit("**- قـال الـمتمرد: الـعقول الـعظيمة تـبني الـأكواد.. 🦅**")
+        await event.edit("**🚀 الـمتمرد شـغال مـية مـية!**")
+
+# 3. نظام الاسم الوقتي (مدمج بطريقة آمنة لتجنب Flood)
+async def time_name_task():
+    while True:
+        try:
+            current_time = datetime.now().strftime("%I:%M")
+            await client(functions.account.UpdateProfileRequest(
+                first_name=f"فرانكو | {current_time}"
+            ))
+            await asyncio.sleep(300) # تحديث كل 5 دقائق فقط لتجنب الحظر
+        except:
+            await asyncio.sleep(600)
+
+# تشغيل الاسم الوقتي في الخلفية
+client.loop.create_task(time_name_task())
