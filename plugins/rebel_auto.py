@@ -37,11 +37,12 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [4] محرك الأوامر (ايدي + فحص + الاوامر) بالعبارة الكاملة ---
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(الاوامر|ايدي|فحص)"))
+# --- [4] محرك الأوامر (ايدي + فحص + الاوامر) ---
+@client.on(events.NewMessage(outgoing=True))
 async def rebel_cmds(event):
-    cmd = event.text
-    if ".ايدي" in cmd or ".فحص" in cmd:
+    text = event.text
+    # أوامر الآيدي والفحص مع الصورة
+    if text.startswith((".ايدي", ".فحص")):
         photos = await client.get_profile_photos("me", limit=1)
         msg = f"""
 **- مـعقل الـمتمرد الـتقني 🛡️🦅**
@@ -56,46 +57,45 @@ async def rebel_cmds(event):
         else: await client.send_message(event.chat_id, msg)
         return
 
-    # نظام عرض الأوامر
-    all_commands = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "رفض", "ايدي", "فحص", "تدمير"]
-    files = ["main.py"] + glob.glob("plugins/*.py")
-    for file in files:
-        try:
-            with open(file, 'r', encoding='utf-8') as f:
-                found = re.findall(r'pattern=r"\\\.([\w_]+)"', f.read())
-                if found: all_commands.extend(found)
-        except: continue
-    unique_cmds = sorted(list(set(all_commands)))
-    
-    msg = f"""
-**- مـعقل الـمتمرد الـتقني 🛡️🦅**
-— — — — — — — — — — —
-**معقل المتمرد: #حيث_يلتقي_التشفير_بالذكاء، والتمرد بالواقع. سورس وُجد ليكون الأول، والبقية مجرد محاولات. نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء.**
-— — — — — — — — — — —
-"""
-    for i, c in enumerate(unique_cmds, 1):
-        msg += f"**{z_nums(str(i))} ⇐** `.{c.replace('_', ' ')}`\n"
-    msg += "— — — — — — — — — — —\n"
-    msg += f"**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة برمجية**"
-    await event.edit(msg)
+    # قائمة الأوامر
+    if text.startswith(".الاوامر"):
+        all_commands = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "رفض", "ايدي", "فحص", "تدمير"]
+        files = ["main.py"] + glob.glob("plugins/*.py")
+        for file in files:
+            try:
+                with open(file, 'r', encoding='utf-8') as f:
+                    found = re.findall(r'pattern=r"\\\.([\w_]+)"', f.read())
+                    if found: all_commands.extend(found)
+            except: continue
+        unique_cmds = sorted(list(set(all_commands)))
+        msg = f"**- مـعقل الـمتمرد الـتقني 🛡️🦅**\n— — — — — — — — — — —\n"
+        for i, c in enumerate(unique_cmds, 1):
+            msg += f"**{z_nums(str(i))} ⇐** `.{c.replace('_', ' ')}`\n"
+        msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة**"
+        await event.edit(msg)
 
-# --- [5] محرك الحماية (تفعيل/تعطيل/سماح) الشغال فعلياً ---
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(تفعيل_الحماية|تعطيل_الحماية|سماح|رفض)"))
+# --- [5] محرك التحكم بالحماية المطور ---
+@client.on(events.NewMessage(outgoing=True))
 async def security_control(event):
     data = load_data()
-    cmd = event.text
-    if ".تفعيل_الحماية" in cmd:
+    text = event.text
+    
+    if text.startswith((".تفعيل الحماية", ".تفعيل_الحماية")):
         data["status"] = True
+        save_data(data)
         await event.edit("**🛡️ تم تفعيل نظام حماية المتمرد بنجاح.**")
-    elif ".تعطيل_الحماية" in cmd:
+    
+    elif text.startswith((".تعطيل الحماية", ".تعطيل_الحماية")):
         data["status"] = False
+        save_data(data)
         await event.edit("**⚠️ تم تعطيل نظام الحماية.. معقلك الآن مكشوف.**")
-    elif ".سماح" in cmd and event.is_reply:
+    
+    elif text.startswith(".سماح") and event.is_reply:
         reply = await event.get_reply_message()
         if reply.sender_id not in data["allowed"]:
             data["allowed"].append(reply.sender_id)
+            save_data(data)
             await event.edit(f"**✅ تم السماح لـ `{reply.sender_id}` بالمراسلة.**")
-    save_data(data)
 
 # --- [6] نظام التخزين والحماية التلقائية ---
 @client.on(events.NewMessage(incoming=True))
@@ -106,7 +106,7 @@ async def security_and_logs(event):
     if not user or user.bot: return
     user_id = str(event.sender_id)
 
-    # التخزين في الجروب
+    # التخزين
     try:
         u_mention = f"@{user.username}" if user.username else user.first_name
         log_text = f"<b>📥 رسالة جديدة:</b>\n👤: {u_mention}\n🆔: <code>{user_id}</code>\n💬: {event.text or 'وسائط'}"
@@ -114,7 +114,7 @@ async def security_and_logs(event):
         if event.media: await client.send_file(LOG_GROUP_ID, event.media)
     except: pass
 
-    # الحماية (التحذير والحظر)
+    # الحماية
     if int(user_id) in data["allowed"] or not data["status"]: return
     counts = data["counts"]
     count = counts.get(user_id, 0) + 1
@@ -122,10 +122,10 @@ async def security_and_logs(event):
     save_data(data)
 
     if count == 1:
-        cap = f"**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام.\n**#حيث_يلتقي_التشفير_بالذكاء..**"
+        cap = f"**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام."
         await event.reply(cap)
     elif count >= 5:
-        await event.reply("**❌ تم حظرك تلقائياً لتجاوز حد المراسلة.**")
+        await event.reply("**❌ تم حظرك تلقائياً.**")
         await client(functions.contacts.BlockRequest(id=int(user_id)))
 
 # --- [7] محرك التلفيش ---
