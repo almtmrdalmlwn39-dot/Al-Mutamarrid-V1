@@ -6,12 +6,12 @@ from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 import config 
 
-# --- [1] إعدادات المملكة (تم تثبيت الآيدي الصحيح للجروب) ---
+# --- [1] إعدادات المملكة ---
 LOG_GROUP_ID = -1003586994898
 DB_FILE = "rebel_security.json"
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 
-# --- [2] محرك الويب (لإرضاء ريندر وضمان بقاء السورس أونلاين) ---
+# --- [2] محرك الويب لريندر ---
 app = Flask(__name__)
 @app.route('/')
 def health_check(): return "🛡️ Rebel Source is Live & Invincible 🦅"
@@ -20,7 +20,7 @@ def run_flask():
     except: pass
 threading.Thread(target=run_flask, daemon=True).start()
 
-# --- [3] تعريف الكلاينت ودوال المساعدة ---
+# --- [3] التعريفات ودوال المساعدة ---
 client = TelegramClient(StringSession(config.SESSION), config.API_ID, config.API_HASH)
 
 def z_nums(text):
@@ -37,9 +37,26 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [4] نظام "الاوامر" الملكي بالأرقام الفخمة ---
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.الاوامر"))
-async def help_engine(event):
+# --- [4] محرك الأوامر (ايدي + فحص + الاوامر) بالعبارة الكاملة ---
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(الاوامر|ايدي|فحص)"))
+async def rebel_cmds(event):
+    cmd = event.text
+    if ".ايدي" in cmd or ".فحص" in cmd:
+        photos = await client.get_profile_photos("me", limit=1)
+        msg = f"""
+**- مـعقل الـمتمرد الـتقني 🛡️🦅**
+— — — — — — — — — — —
+◈ الآيـدي الخـاص بـك ⇐ `{event.chat_id}`
+◈ حـالة الـسورس ⇐ شـغال ✅
+— — — — — — — — — — —
+**معقل المتمرد: #حيث_يلتقي_التشفير_بالذكاء، والتمرد بالواقع. سورس وُجد ليكون الأول، والبقية مجرد محاولات. نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**
+"""
+        await event.delete()
+        if photos: await client.send_file(event.chat_id, photos[0], caption=msg)
+        else: await client.send_message(event.chat_id, msg)
+        return
+
+    # نظام عرض الأوامر
     all_commands = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "رفض", "ايدي", "فحص", "تدمير"]
     files = ["main.py"] + glob.glob("plugins/*.py")
     for file in files:
@@ -48,34 +65,48 @@ async def help_engine(event):
                 found = re.findall(r'pattern=r"\\\.([\w_]+)"', f.read())
                 if found: all_commands.extend(found)
         except: continue
-    
-    unique_cmds = []
-    [unique_cmds.append(x) for x in all_commands if x not in unique_cmds]
+    unique_cmds = sorted(list(set(all_commands)))
     
     msg = f"""
 **- مـعقل الـمتمرد الـتقني 🛡️🦅**
 — — — — — — — — — — —
-**معقل المتمرد: #حيث_يلتقي_التشفير_بالذكاء، والتمرد بالواقع. سورس وُجد ليكون الأول، والبقية مجرد محاولات. نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**
+**معقل المتمرد: #حيث_يلتقي_التشفير_بالذكاء، والتمرد بالواقع. سورس وُجد ليكون الأول، والبقية مجرد محاولات. نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء.**
 — — — — — — — — — — —
 """
-    for i, cmd in enumerate(unique_cmds, 1):
-        msg += f"**{z_nums(str(i))} ⇐** `.{cmd.replace('_', ' ')}`\n"
-    
+    for i, c in enumerate(unique_cmds, 1):
+        msg += f"**{z_nums(str(i))} ⇐** `.{c.replace('_', ' ')}`\n"
     msg += "— — — — — — — — — — —\n"
     msg += f"**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة برمجية**"
     await event.edit(msg)
 
-# --- [5] نظام التخزين في الجروب والحماية (1/5) ---
+# --- [5] محرك الحماية (تفعيل/تعطيل/سماح) الشغال فعلياً ---
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(تفعيل_الحماية|تعطيل_الحماية|سماح|رفض)"))
+async def security_control(event):
+    data = load_data()
+    cmd = event.text
+    if ".تفعيل_الحماية" in cmd:
+        data["status"] = True
+        await event.edit("**🛡️ تم تفعيل نظام حماية المتمرد بنجاح.**")
+    elif ".تعطيل_الحماية" in cmd:
+        data["status"] = False
+        await event.edit("**⚠️ تم تعطيل نظام الحماية.. معقلك الآن مكشوف.**")
+    elif ".سماح" in cmd and event.is_reply:
+        reply = await event.get_reply_message()
+        if reply.sender_id not in data["allowed"]:
+            data["allowed"].append(reply.sender_id)
+            await event.edit(f"**✅ تم السماح لـ `{reply.sender_id}` بالمراسلة.**")
+    save_data(data)
+
+# --- [6] نظام التخزين والحماية التلقائية ---
 @client.on(events.NewMessage(incoming=True))
 async def security_and_logs(event):
     data = load_data()
     if not event.is_private or event.out: return
-    
     user = await event.get_sender()
     if not user or user.bot: return
     user_id = str(event.sender_id)
 
-    # إرسال الرسالة والميديا لجروب التخزين بصيغة آمنة
+    # التخزين في الجروب
     try:
         u_mention = f"@{user.username}" if user.username else user.first_name
         log_text = f"<b>📥 رسالة جديدة:</b>\n👤: {u_mention}\n🆔: <code>{user_id}</code>\n💬: {event.text or 'وسائط'}"
@@ -83,7 +114,7 @@ async def security_and_logs(event):
         if event.media: await client.send_file(LOG_GROUP_ID, event.media)
     except: pass
 
-    # نظام الحماية
+    # الحماية (التحذير والحظر)
     if int(user_id) in data["allowed"] or not data["status"]: return
     counts = data["counts"]
     count = counts.get(user_id, 0) + 1
@@ -91,30 +122,24 @@ async def security_and_logs(event):
     save_data(data)
 
     if count == 1:
-        photos = await client.get_profile_photos("me", limit=1)
         cap = f"**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام.\n**#حيث_يلتقي_التشفير_بالذكاء..**"
-        if photos: await client.send_file(event.chat_id, photos[0], caption=cap)
-        else: await event.reply(cap)
+        await event.reply(cap)
     elif count >= 5:
         await event.reply("**❌ تم حظرك تلقائياً لتجاوز حد المراسلة.**")
         await client(functions.contacts.BlockRequest(id=int(user_id)))
 
-# --- [6] محرك التلفيش (التدمير الحقيقي) ---
+# --- [7] محرك التلفيش ---
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.تدمير (\d+) (.*)"))
 async def flood_destroy(event):
-    count = int(event.pattern_match.group(1))
-    text = event.pattern_match.group(2)
+    count, text = int(event.pattern_match.group(1)), event.pattern_match.group(2)
     await event.delete()
     for _ in range(count):
         await client.send_message(event.chat_id, text)
         await asyncio.sleep(0.05)
 
-# --- [7] الإقلاع وتحديث الاسم تلقائياً ---
+# --- [8] الإقلاع وتحديث الاسم ---
 async def start_rebel():
     await client.start()
-    print("🦅 [SUCCESS]: معقل المتمرد في الخدمة الآن.")
-    
-    # تحديث الوقت في الاسم تلقائياً
     async def time_updater():
         while True:
             try:
@@ -124,7 +149,6 @@ async def start_rebel():
                 await client(UpdateProfileRequest(first_name=f"{clean_name} | {tm}"))
             except: pass
             await asyncio.sleep(300)
-    
     asyncio.create_task(time_updater())
     await client.run_until_disconnected()
 
