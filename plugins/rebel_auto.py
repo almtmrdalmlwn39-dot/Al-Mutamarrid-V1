@@ -1,9 +1,9 @@
 from telethon import events, functions
 import asyncio
 from datetime import datetime
-import main # الربط مع الملف الرئيسي
+# التعديل الذهبي: الاستدعاء من الملف الرئيسي مباشرة لضمان العمل
+from __main__ import client
 
-client = main.client
 allowed_users = []
 
 # 1. نظام الرد التلقائي (الترحيب)
@@ -34,7 +34,7 @@ async def auto_reply(event):
         try:
             await event.reply(msg)
         except Exception as e:
-            print(f"Error in auto_reply: {e}")
+            print(f"خطأ في الرد: {e}")
 
 # 2. أوامر التحكم (سماح، رفض، فحص)
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.(سماح|رفض|فحص)"))
@@ -55,7 +55,8 @@ async def control(event):
 async def time_name_task():
     while True:
         try:
-            # استخدام توقت صنعاء (pytz موجود في requirements.txt)
+            # تحديث الاسم ليناسب توقيت صنعاء
+            from datetime import datetime
             import pytz
             yemen_tz = pytz.timezone('Asia/Aden')
             current_time = datetime.now(yemen_tz).strftime("%I:%M")
@@ -63,9 +64,8 @@ async def time_name_task():
                 first_name=f"فرانكو | {current_time}"
             ))
             await asyncio.sleep(300) 
-        except Exception:
+        except:
             await asyncio.sleep(600)
 
-# البدء في مهمة الاسم الوقتي عند تشغيل الملف
-loop = asyncio.get_event_loop()
-loop.create_task(time_name_task())
+# تشغيل مهمة الوقت فور إقلاع البوت
+client.loop.create_task(time_name_task())
