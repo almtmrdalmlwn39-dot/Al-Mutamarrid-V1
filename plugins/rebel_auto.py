@@ -7,7 +7,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 import config 
 
 # --- [1] إعدادات المملكة (تم تثبيت الآيدي الصحيح للجروب) ---
-LOG_GROUP_ID = -1002422039986 
+LOG_GROUP_ID = -1003586994898
 DB_FILE = "rebel_security.json"
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 
