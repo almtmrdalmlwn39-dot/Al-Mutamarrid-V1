@@ -5,6 +5,17 @@ from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
 import config 
 
+# --- واجهة المتمرد السيبرانية (ASCII ART) ---
+REBEL_LOGO = """
+       .---.        🛡️ THE REBEL CYBER SOURCE 🛡️
+      /     \       ---------------------------
+      | 0 0 |       [#] STATUS: INVINCIBLE
+      |  ^  |       [#] LOGIC: QUANTUM REBEL
+      / \_  /       [#] RULE: NO MERCY FOR BUGS
+    ./ /   \ \.     ---------------------------
+   / /       \ \    "القمة تتسع للمتمرد فقط.."
+"""
+
 # --- كود إرضاء منصة ريندر ---
 from flask import Flask
 import threading
@@ -39,30 +50,30 @@ async def help_engine(event):
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 content = f.read()
-                # كشف الأوامر بدقة
                 found = re.findall(r'pattern=r"\\\.([\w_]+)"', content)
                 if found: all_commands.extend(found)
         except: continue
 
     unique_cmds = sorted(list(set(all_commands)))
     
-    # تنسيق الروابط الخاصة بك
-    ch_link = f"https://t.me/{getattr(config, 'CH_USERNAME', 'bedmoddinnow')}"
-    dev1 = f"https://t.me/{getattr(config, 'OWNER_1', 'Vi_ti0')}"
-    dev2 = f"https://t.me/{getattr(config, 'OWNER_2', 'A0_O7_')}"
+    # جلب المعرفات وتنظيفها لضمان عمل الروابط
+    owner1 = getattr(config, 'OWNER_1', 'Vi_ti0').replace("@", "")
+    owner2 = getattr(config, 'OWNER_2', 'A0_O7_').replace("@", "")
 
-    msg = "**🛡️ أوامـر سـورس الـمتمرد الـتقني 🦅**\n"
+    msg = "**🛡️ معقل المتمرد: حيث يلتقي التشفير بالذكاء 🦅**\n"
+    msg += "— — — — — — — — — — — — —\n"
+    msg += "**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة.**\n"
     msg += "— — — — — — — — — — — — —\n"
     
     for i, cmd in enumerate(unique_cmds, 1):
-        msg += f"**{i} ⇐** `.{cmd}`\n"
+        # استخدام دالة تحويل الأرقام لجعل القائمة فخمة
+        msg += f"**{z_nums(str(i))} ⇐** `.{cmd}`\n"
     
     msg += "— — — — — — — — — — — — —\n"
-    msg += f"**📢 قـناة الـسورس ⇐ [اضغط هنا]({ch_link})**\n"
-    msg += f"**👤 الـمطـور 1 ⇐ [Vi_ti0]({dev1})**\n"
-    msg += f"**👤 الـمطـور 2 ⇐ [A0_O7_]({dev2})**\n"
+    msg += f"**👤 المطور الأول ⇐ [تواصل هنا](https://t.me/{owner1})**\n"
+    msg += f"**👤 المطور الثاني ⇐ [تواصل هنا](https://t.me/{owner2})**\n"
     msg += "— — — — — — — — — — — — —\n"
-    msg += f"**📊 الإجمالي: {len(unique_cmds)} أمر شغّال**"
+    msg += f"**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة برمجية شغّالة**"
     
     await event.edit(msg, link_preview=False)
 
@@ -93,8 +104,12 @@ def load_plugins():
         except Exception: pass
 
 async def start_mared():
+    # طباعة الشعار في الكونسول عند البداية
+    print(REBEL_LOGO)
+    print("🚀 [SYSTEM]: جاري فحص أنظمة التشفير...")
+    print("🦅 [SUCCESS]: معقل المتمرد تحت السيطرة الكاملة.")
+    
     await client.start()
-    print("🦅 الـمتمرد يـحلق الآن..")
     load_plugins()
     asyncio.create_task(profile_engine())
     await client.run_until_disconnected()
