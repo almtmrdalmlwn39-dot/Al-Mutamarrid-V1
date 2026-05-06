@@ -1,6 +1,6 @@
 import asyncio
 from telethon import events, functions, types
-# التعديل الجوهري هنا ليتوافق مع المتمرد V1
+# استدعاء القلب النابض للسورس لضمان عدم التضارب
 import main 
 
 client = main.client
@@ -8,7 +8,7 @@ client = main.client
 # هوية الإحصائيات
 STATS_IDENTITY = "**- مـركز بـيانات الـمتمرد الـتقني | الـإحصائيات 📊🦅**"
 
-# 1. أمر إحصائيات الحساب الشاملة
+# 1. أمر إحصائيات الحساب الشاملة (كم كروب، كم شخص، كم بوت)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.احصائياتي"))
 async def account_stats(event):
     await event.edit("**- جـاري تـحليل بـيانات الـحساب...**")
@@ -39,7 +39,7 @@ async def account_stats(event):
     except Exception as e:
         await event.edit(f"**❌ حدث خطأ أثناء التحليل: {e}**")
 
-# 2. أمر "كشف الجروب"
+# 2. أمر "كشف الجروب" (معلومات المجموعة الحالية)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.كشف_الجروب"))
 async def chat_info(event):
     if event.is_private: return
@@ -57,9 +57,10 @@ async def chat_info(event):
             f"{STATS_IDENTITY}"
         )
         await event.edit(info)
-    except: await event.edit("**❌ لا أملك صلاحيات كافية للكشف.**")
+    except Exception:
+        await event.edit("**❌ لا أملك صلاحيات كافية للكشف عن هذه المجموعة.**")
 
-# 3. أمر "من أنا؟"
+# 3. أمر "هويتي" (معلوماتك الشخصية)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.هويتي"))
 async def my_id(event):
     me = await client.get_me()
@@ -80,9 +81,9 @@ async def stats_help(event):
     help_text = (
         "**📊 أوامـر الـبيانات والـإحصائيات :**\n"
         "**— — — — — — — — — —**\n"
-        "**📈 | `.احصائياتي` :** تـفاصيل حـسابك.\n"
-        "**🔍 | `.كشف_الجروب` :** تـفاصيل الـمجموعة.\n"
-        "**🪪 | `.هويتي` :** مـعلوماتك الـشخصية.\n"
+        "**📈 | `.احصائياتي` :** تـفاصيل حـسابك كـاملاً.\n"
+        "**🔍 | `.كشف_الجروب` :** تـفاصيل الـمجموعة الـحالية.\n"
+        "**🪪 | `.هويتي` :** لـعرض مـعلوماتك الـشخصية.\n"
         "**— — — — — — — — — —**\n"
         f"{STATS_IDENTITY}"
     )
