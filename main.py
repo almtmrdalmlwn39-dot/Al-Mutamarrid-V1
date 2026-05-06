@@ -10,7 +10,6 @@ from flask import Flask
 import threading
 
 app = Flask(__name__)
-
 @app.route('/')
 def health_check():
     return "The Rebel UserBot is Live! 🦅"
@@ -20,10 +19,9 @@ def run_flask():
         app.run(host='0.0.0.0', port=10000)
     except: pass
 
-# تشغيل السيرفر في خيط منفصل
 threading.Thread(target=run_flask, daemon=True).start()
-# --- نهاية كود ريندر ---
 
+# --- تعريف الكلاينت في البداية لكي تراه الإضافات ---
 SESSION_STRING = config.SESSION 
 client = TelegramClient(StringSession(SESSION_STRING), config.API_ID, config.API_HASH)
 
@@ -31,23 +29,25 @@ def z_nums(text):
     n = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'}
     return "".join(n.get(c, c) for c in text)
 
+# محرك البروفايل (تحديث كل 10 دقائق لتجنب الحظر)
 async def profile_engine():
     while True:
         try:
             tm = z_nums(datetime.now(config.YEMEN_TZ).strftime("%I:%M"))
             await client(UpdateProfileRequest(
-                first_name=f"{config.FIXED_NAME} | {tm}",
-                about=f"{config.MY_BIO} | {tm}"
+                first_name=f"{config.FIXED_NAME} | {tm}"
             ))
-        except: pass
-        await asyncio.sleep(60)
+            await asyncio.sleep(600) # 600 ثانية = 10 دقائق (أمان كامل)
+        except Exception as e:
+            await asyncio.sleep(300)
 
 def load_plugins():
-    # تأكد أن مجلد plugins موجود
     if not os.path.exists("plugins"):
         os.makedirs("plugins")
     for name in glob.glob("plugins/*.py"):
         plugin_name = name.replace("/", ".").replace("\\", ".").replace(".py", "")
+        # تخطي ملفات الحفظ المؤقتة
+        if "__init__" in plugin_name: continue
         try:
             importlib.import_module(plugin_name)
             print(f"✅ Loaded: {plugin_name}")
@@ -57,15 +57,12 @@ def load_plugins():
 async def start_mared():
     await client.start()
     print("🦅 الـمتمرد يـحلق الآن..")
+    load_plugins() # تحميل الإضافات أولاً
     asyncio.create_task(profile_engine())
-    load_plugins()
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
-    # هذه الطريقة تمنع خطأ الـ RuntimeError نهائياً
     try:
-        asyncio.run(start_mared())
+        client.loop.run_until_complete(start_mared())
     except (KeyboardInterrupt, SystemExit):
         pass
-    except Exception as e:
-        print(f"🚨 Fatal Error: {e}")
