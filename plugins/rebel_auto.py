@@ -1,6 +1,7 @@
 from telethon import events, functions, types
-import asyncio
+import asyncio  # ضروري جداً عشان ما يطلع خطأ
 import os
+import pytz # ضروري للوقت
 from datetime import datetime
 from __main__ import client
 
@@ -11,21 +12,24 @@ LOG_GROUP_ID = -1002446700860
 
 @client.on(events.NewMessage(incoming=True))
 async def auto_reply(event):
+    # نشتغل فقط في الخاص والرسائل اللي جاية لك
     if event.is_private and not event.out:
-        if event.sender_id in allowed_users: return
+        user_id = event.sender_id
+        
+        # إذا كان الشخص مسموح له، لا ترد عليه تلقائياً
+        if user_id in allowed_users: return
+        
         user = await event.get_sender()
         if user and user.bot: return
-        
-        user_id = event.sender_id
 
-        # [أ] نظام الحظر التلقائي (البلوك النهائي بعد 5 رسائل)
+        # [أ] نظام الحظر التلقائي (بعد 5 رسائل)
         message_counts[user_id] = message_counts.get(user_id, 0) + 1
         if message_counts[user_id] > 5:
             await event.reply("**⚠️ تم حظرك نهائياً لتجاهلك التحذيرات وتجاوز حد المراسلة.**")
             await client(functions.contacts.BlockRequest(id=user_id))
             return
 
-        # [ب] صيد الوسائط المخفية (ذاتية التدمير)
+        # [ب] صيد الوسائط المخفية
         if event.media:
             if hasattr(event.media, 'ttl_seconds') and event.media.ttl_seconds:
                 try:
@@ -35,7 +39,7 @@ async def auto_reply(event):
                     if os.path.exists(file): os.remove(file)
                 except: pass
 
-        # [ج] الرد التلقائي مع التحذير الفوري (يظهر في أول رسالة فقط)
+        # [ج] الرد التلقائي (التحذير الفوري من أول رسالة)
         if message_counts[user_id] == 1:
             photos = await client.get_profile_photos("me", limit=1)
             msg = f"""
@@ -57,13 +61,23 @@ async def auto_reply(event):
                     await event.reply(msg)
             except: pass
 
-        # --- إرسال نسخة للتخزين في المملكة ---
+        # --- التخزين في المملكة ---
         try:
             user_info = f"[{user.first_name}](tg://user?id={user_id})"
             text_to_log = event.text if event.text else "أرسل وسائط/ملف"
             log_text = f"**📥 رسـالة جـديدة مـن:** {user_info}\n**🆔 الآيـدي:** `{user_id}`\n**💬 الـنص:**\n{text_to_log}"
             await client.send_message(LOG_GROUP_ID, log_text)
-        except Exception as e:
-            print(f"Error: {e}")
+        except: pass
 
-# (بقية الأوامر .انشاء تخزين و .سماح تبقى كما هي)
+# أوامر التحكم
+@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(سماح|رفض|فحص)"))
+async def control(event):
+    cmd = event.pattern_match.group(1)
+    if cmd == "سماح":
+        if event.chat_id not in allowed_users: allowed_users.append(event.chat_id)
+        await event.edit("**✅ تـم الـسماح.**")
+    elif cmd == "رفض":
+        if event.chat_id in allowed_users: allowed_users.remove(event.chat_id)
+        await event.edit("**❌ تـم إلغاء الـسماح.**")
+    elif cmd == "فحص":
+        await event.edit("**🚀 الـمتمرد شـغال مـية مـية!**")
