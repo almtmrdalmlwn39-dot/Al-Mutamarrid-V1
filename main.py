@@ -14,15 +14,9 @@ REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
 genai.configure(api_key="AIzaSyDwzx1U-IGgw-Kybz2RVt2N-xtkWrIt7aU")
 model = genai.GenerativeModel('gemini-pro')
 
-# --- [2] الإعدادات ---
+# --- [2] الإعدادات والبيانات ---
 DB_FILE = "rebel_security.json"
-LOG_GROUP_ID = -1003586994898 
 SUDO_USERS = [6467728995] 
-
-app = Flask(__name__)
-@app.route('/')
-def health_check(): return "🛡️ Rebel Source is Live"
-threading.Thread(target=lambda: app.run(host='0.0.0.0', port=10000), daemon=True).start()
 
 client = TelegramClient(StringSession(config.SESSION), config.API_ID, config.API_HASH)
 
@@ -40,40 +34,37 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [3] محرك الأوامر والايدي بالصورة ---
+# --- [3] محرك الأوامر (الايدي + المطور + القائمة) ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_main_engine(event):
     text = event.text
-    data = load_data()
     
-    # --- أمر الايدي بالصورة ---
+    # 1. أمر الايدي بالصورة (بيانات صافية بدون العبارة)
     if text.startswith(".ايدي"):
         reply = await event.get_reply_message()
         target = reply.sender if reply else await event.get_sender()
-        
-        # تحديد الرتبة
         rank = "المالك" if target.id in SUDO_USERS else "عضو"
         if event.is_group:
-            permissions = await client.get_permissions(event.chat_id, target)
-            if permissions.is_admin: rank = "أدمن"
-            if permissions.is_creator: rank = "المالك"
+            perms = await client.get_permissions(event.chat_id, target)
+            if perms.is_admin: rank = "أدمن"
 
         info = f"**👤 الاسم:** {target.first_name}\n"
         info += f"**🆔 الايدي:** `{target.id}`\n"
         info += f"**🎖️ الرتبة:** {rank}\n"
-        info += f"**🦅 السورس:** المتمرد التقني\n\n{REBEL_SIG_TEXT}"
+        info += f"**🦅 السورس:** المتمرد التقني"
         
         try:
             photo = await client.download_profile_photo(target.id)
-            await client.send_file(event.chat_id, photo, caption=info, reply_to=reply.id if reply else event.id)
-            if photo: os.remove(photo)
-            await event.delete()
-        except:
-            await event.edit(info)
+            if photo:
+                await client.send_file(event.chat_id, photo, caption=info, reply_to=reply.id if reply else event.id)
+                os.remove(photo)
+                await event.delete()
+            else: await event.edit(info)
+        except: await event.edit(info)
 
-    # --- عرض الأوامر ---
+    # 2. أمر القائمة مع الحسابات المدمجة نصياً كما في طلبك
     elif text == ".الاوامر":
-        new_cmds = ["تفعيل الحماية", "تعطيل الحماية", "سماح", "حظر", "فك حظر", "ايدي", "فحص"]
+        new_cmds = ["تفعيل الحماية", "تعطيل الحماية", "سماح", "حظر", "فك حظر", "ايدي", "مطور", "فحص", "تلفيش"]
         plugin_cmds = []
         files = ["main.py"] + glob.glob("plugins/*.py") + glob.glob("plugins/*/*.py")
         for file in files:
@@ -89,23 +80,43 @@ async def rebel_main_engine(event):
         msg = f"**🛡️ معقل المتمرد: حيث يلتقي التشفير بالذكاء 🦅**\n— — —\n{REBEL_SIG_TEXT}\n— — —\n"
         for i, cmd in enumerate(all_list, 1):
             msg += f"**{z_nums(str(i))} ⇐** `.{cmd}`\n"
-        msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(all_list)))} حزمة برمجية شغّالة**"
-        await event.edit(msg, link_preview=False)
+        msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(all_list)))} حزمة برمجية شغّالة**\n\n"
+        
+        # تنسيق الحسابات المدمجة نصياً (شفافة داخل النص)
+        msg += f"— — — — — — — — — — — —\n"
+        msg += f"👤 المطور الأول ⇐ **[تواصل هنا](https://t.me/Vi_ti0)**\n"
+        msg += f"👤 المطور الثاني ⇐ **[تواصل هنا](https://t.me/A0_O7)**\n"
+        msg += f"— — — — — — — — — — — —"
+        
+        try:
+            await client.send_file(event.chat_id, REBEL_IMG, caption=msg)
+            await event.delete()
+        except: await event.edit(msg, link_preview=False)
 
-# --- [4] نظام الحماية والعد الصحيح في الخاص ---
+    # 3. أمر المطور المنفصل بنفس التنسيق
+    elif text.startswith(".المطور") or text.startswith(".مطور"):
+        dev_msg = f"**🦅 حسابات مطورين سورس المتمرد 🛡️**\n\n"
+        dev_msg += f"— — — — — — — — — — — —\n"
+        dev_msg += f"👤 المطور الأول ⇐ **[تواصل هنا](https://t.me/Vi_ti0)**\n"
+        dev_msg += f"👤 المطور الثاني ⇐ **[تواصل هنا](https://t.me/A0_O7)**\n"
+        dev_msg += f"— — — — — — — — — — — —\n**- القمة تتسع للمتمرد فقط..**"
+        try:
+            await client.send_file(event.chat_id, REBEL_IMG, caption=dev_msg)
+            await event.delete()
+        except: await event.reply(dev_msg)
+
+# --- [4] نظام الحماية والعد المطور (الترحيب والعبارة في البداية فقط) ---
 @client.on(events.NewMessage(incoming=True))
 async def security_logic(event):
     if not event.is_private: return
     data = load_data()
     user_id = event.sender_id
-    
+    if user_id in SUDO_USERS or user_id == (await client.get_me()).id: return
+    if not data.get("status"): return
+
     sender = await event.get_sender()
     f_name = sender.first_name if sender.first_name else "المستخدم"
 
-    if user_id in SUDO_USERS or user_id in data.get("allowed", []) or user_id == (await client.get_me()).id: return
-    if not data.get("status"): return
-    
-    # تحديث العداد وحفظه فوراً
     u_str = str(user_id)
     counts = data.get("counts", {})
     count = counts.get(u_str, 0) + 1
@@ -114,22 +125,20 @@ async def security_logic(event):
     save_data(data)
 
     if count == 1:
-        msg = f"**يا {f_name}، مرحباً بك في معقل المتمرد 🛡️**\n**⚠️ تحذير ({z_nums(str(count))}/٥): يمنع التكرار.**\n\n{REBEL_SIG_TEXT}"
+        # الترحيب الأول يحتوي على العبارة الطويلة
+        msg = f"**يا {f_name}، مرحباً بك في معقل المتمرد 🛡️**\n**⚠️ تنبيه ({z_nums(str(count))}/٥): يمنع التكرار.**\n\n{REBEL_SIG_TEXT}"
         await client.send_file(event.chat_id, REBEL_IMG, caption=msg)
     elif count < 5:
-        prompt = f"رد بلهجة يمنية فخمة ترحب بالضيف وتذكره أن التكرار ممنوع. الرسالة: {event.text}"
-        try:
-            res = model.generate_content(prompt)
-            reply = res.text
-        except: reply = "أهلاً بك، التكرار ممنوع في معقلنا."
-        
-        full_msg = f"**يا {f_name}.. {reply}**\n**⚠️ تنبيه ({z_nums(str(count))}/٥)**\n\n{REBEL_SIG_TEXT}"
+        # التنبيهات التالية مختصرة وسريعة
+        reply = "أهلاً بك، نرجو الالتزام بحدود الرسائل لضمان عدم الحظر."
+        full_msg = f"**يا {f_name}.. {reply}**\n**⚠️ تنبيه ({z_nums(str(count))}/٥)**"
         await client.send_file(event.chat_id, REBEL_IMG, caption=full_msg)
     elif count >= 5:
+        # الحظر النهائي
         await event.reply(f"**🚫 تم حظرك لتجاوزك حد التكرار.**")
         await client(functions.contacts.BlockRequest(id=user_id))
 
-# --- [5] التشغيل وتحميل الإضافات ---
+# --- [5] التشغيل النهائي ---
 async def start_rebel():
     await client.start()
     if os.path.exists("plugins"):
