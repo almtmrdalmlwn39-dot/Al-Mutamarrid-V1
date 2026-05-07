@@ -1,12 +1,22 @@
-import asyncio, os, pytz, glob, importlib, sys, re, json, threading
-from datetime import datetime
+import asyncio, os, glob, json, threading, re
 from flask import Flask
 from telethon import TelegramClient, events, functions, types
 from telethon.sessions import StringSession
-import google.generativeai as genai
 import config 
 
-# --- [1] الهوية والروابط ---
+# --- [1] إصلاح مشكلة Render (المنفذ الوهمي) ---
+app = Flask(__name__)
+@app.route('/')
+def health_check(): return "🛡️ Rebel Source is Live"
+
+def run_flask():
+    # فتح منفذ 10000 لإيقاف تنبيهات Render
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+threading.Thread(target=run_flask, daemon=True).start()
+
+# --- [2] الهوية والروابط الشفافة ---
 REBEL_SIG_TEXT = "**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**"
 REBEL_DEV_LINKS = (
     "\n— — — — — — — — — — — —\n"
@@ -15,8 +25,6 @@ REBEL_DEV_LINKS = (
     "— — — — — — — — — — — —"
 )
 REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
-
-# --- [2] الإعدادات ---
 DB_FILE = "rebel_security.json"
 SUDO_USERS = [6467728995] 
 
@@ -31,87 +39,63 @@ def load_data():
         try:
             with open(DB_FILE, "r") as f: return json.load(f)
         except: pass
-    return {"status": False, "counts": {}, "allowed": []}
+    return {"status": False, "counts": {}}
 
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [3] محرك الأوامر ---
+# --- [3] محرك الأوامر والحسابات الشفافة ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_main_engine(event):
     text = event.text
     data = load_data()
     
-    # أمر تفعيل الحماية (للتأكد أن النظام اشتغل)
     if text == ".تفعيل الحماية":
-        data["status"] = True
-        save_data(data)
-        await event.edit("**✅ تم تفعيل نظام حماية معقل المتمرد بنجاح.. القلعة الآن مؤمنة.**")
+        data["status"] = True; save_data(data)
+        await event.edit("**✅ تم تفعيل نظام حماية معقل المتمرد.. القلعة مؤمنة.**")
 
-    elif text == ".تعطيل الحماية":
-        data["status"] = False
-        save_data(data)
-        await event.edit("**⚠️ تم تعطيل نظام الحماية.. القلعة الآن مفتوحة.**")
+    elif text == ".الاوامر":
+        # عرض الأوامر مع دمج الحسابات في الأسفل
+        all_cmds = ["تفعيل الحماية", "تعطيل الحماية", "ايدي", "مطور", "فحص", "تلفيش"]
+        msg = f"**🛡️ معقل المتمرد 🦅**\n— — —\n{REBEL_SIG_TEXT}\n— — —\n"
+        for i, cmd in enumerate(all_cmds, 1):
+            msg += f"**{z_nums(str(i))} ⇐** `.{cmd}`\n"
+        msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(all_cmds)))} حزمة شغالة**"
+        msg += REBEL_DEV_LINKS 
+        await client.send_file(event.chat_id, REBEL_IMG, caption=msg); await event.delete()
 
-    # أمر الايدي
     elif text.startswith(".ايدي"):
+        # الايدي بالصورة مع الحسابات
         reply = await event.get_reply_message()
         target = reply.sender if reply else await event.get_sender()
         rank = "المالك" if target.id in SUDO_USERS else "عضو"
-        info = f"**👤 الاسم:** {target.first_name}\n**🆔 الايدي:** `{target.id}`\n**🎖️ الرتبة:** {rank}\n**🦅 السورس:** المتمرد التقني\n{REBEL_DEV_LINKS}"
-        try:
-            photo = await client.download_profile_photo(target.id)
-            await client.send_file(event.chat_id, photo or REBEL_IMG, caption=info, reply_to=reply.id if reply else event.id)
-            if photo: os.remove(photo)
-            await event.delete()
-        except: await event.edit(info)
+        info = f"**👤 الاسم:** {target.first_name}\n**🆔 الايدي:** `{target.id}`\n**🎖️ الرتبة:** {rank}\n{REBEL_DEV_LINKS}"
+        photo = await client.download_profile_photo(target.id)
+        await client.send_file(event.chat_id, photo or REBEL_IMG, caption=info); await event.delete()
 
-    # قائمة الأوامر
-    elif text == ".الاوامر":
-        all_cmds = ["تفعيل الحماية", "تعطيل الحماية", "ايدي", "مطور", "فحص", "تلفيش"]
-        msg = f"**🛡️ معقل المتمرد: حيث يلتقي التشفير بالذكاء 🦅**\n— — —\n{REBEL_SIG_TEXT}\n— — —\n"
-        for i, cmd in enumerate(all_cmds, 1):
-            msg += f"**{z_nums(str(i))} ⇐** `.{cmd}`\n"
-        msg += f"— — —\n{REBEL_DEV_LINKS}"
-        await client.send_file(event.chat_id, REBEL_IMG, caption=msg)
-        await event.delete()
-
-# --- [4] نظام الحماية والترحيب (الإصلاح النهائي) ---
+# --- [4] نظام الحماية والترحيب ---
 @client.on(events.NewMessage(incoming=True))
 async def security_logic(event):
     if not event.is_private: return
     data = load_data()
-    if not data.get("status"): return # التأكد أن الحماية مفعلة
-    
-    user_id = event.sender_id
-    if user_id in SUDO_USERS or user_id == (await client.get_me()).id: return
+    if not data.get("status") or event.sender_id in SUDO_USERS: return
 
-    u_str = str(user_id)
+    u_str = str(event.sender_id)
     counts = data.get("counts", {})
     count = counts.get(u_str, 0) + 1
-    counts[u_str] = count
-    data["counts"] = counts
-    save_data(data)
-
-    sender = await event.get_sender()
-    f_name = sender.first_name if sender.first_name else "المستخدم"
+    counts[u_str] = count; data["counts"] = counts; save_data(data)
 
     if count == 1:
-        # الترحيب الأول مع الحسابات
-        msg = f"**يا {f_name}، مرحباً بك في معقل المتمرد 🛡️**\n**⚠️ تنبيه ({z_nums(str(count))}/٥): يمنع التكرار.**\n\n{REBEL_SIG_TEXT}\n{REBEL_DEV_LINKS}"
+        msg = f"**يا مستخدم، مرحباً بك في معقل المتمرد 🛡️**\n**⚠️ تنبيه ({z_nums(str(count))}/٥)**\n{REBEL_DEV_LINKS}"
         await client.send_file(event.chat_id, REBEL_IMG, caption=msg)
-    elif count < 5:
-        # تنبيه تكرار
-        await client.send_file(event.chat_id, REBEL_IMG, caption=f"**يا {f_name}.. لا تزيد بالهرج فوق راسي.**\n**⚠️ تنبيه ({z_nums(str(count))}/٥)**")
     elif count >= 5:
-        # حظر نهائي
+        # رسالة الحظر مع روابط المطور
         await event.reply(f"**🚫 تم حظرك لتجاوزك حد التكرار.**\n{REBEL_DEV_LINKS}")
-        await client(functions.contacts.BlockRequest(id=user_id))
+        await client(functions.contacts.BlockRequest(id=event.sender_id))
 
-# --- [5] التشغيل ---
 async def start_rebel():
     await client.start()
-    print("🛡️ Rebel Source is Online")
+    print("🛡️ Rebel Source is Live on Render")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
