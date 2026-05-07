@@ -7,7 +7,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 import google.generativeai as genai
 import config 
 
-# --- [1] الهوية في الامن السيبراني#---
+# --- [1] الهوية والذكاء الاصطناعي ---
 REBEL_LOGO = """
        .---.        🛡️ THE REBEL CYBER SOURCE 🛡️
       /     \       ---------------------------
@@ -17,6 +17,7 @@ REBEL_LOGO = """
     ./ /   \ \.     ---------------------------
    "القمة تتسع للمتمرد فقط.."
 """
+# عبارتك الأصلية الفخمة
 REBEL_SIG_TEXT = "**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**"
 REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
 
@@ -56,37 +57,15 @@ async def get_franco_reply(user_msg):
         return response.text
     except: return "لا تزيد بالهرج فوق راسي."
 
-# --- [3] محرك الأوامر الشامل (بدون مسح سجل) ---
+# --- [3] محرك الأوامر الشامل (يحافظ على الشرطات وحساب العداد) ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_main_engine(event):
     text = event.text
     data = load_data()
     reply = await event.get_reply_message()
     
-    # قائمة الأوامر المدمجة (تم حذف مسح السجل)
-    new_cmds = ["تفعيل الحماية", "تعطيل الحماية", "سماح", "حظر", "فك حظر", "ايدي", "فحص"]
-
-    if text == ".تفعيل الحماية":
-        data["status"] = True
-        save_data(data)
-        return await event.edit(f"**🛡️ تم تفعيل نظام حماية المتمرد.**\n\n{REBEL_SIG_TEXT}")
-
-    if text == ".تعطيل الحماية":
-        data["status"] = False
-        save_data(data)
-        return await event.edit(f"**⚠️ تم تعطيل نظام الحماية.**\n\n{REBEL_SIG_TEXT}")
-
-    if text == ".سماح" and reply:
-        user_id = reply.sender_id
-        if user_id not in data["allowed"]:
-            data["allowed"].append(user_id)
-            save_data(data)
-            return await event.edit(f"**✅ تم السماح للمستخدم `{user_id}` بالتواصل.**")
-
-    if text == ".حظر" and reply:
-        user_id = reply.sender_id
-        await client(functions.contacts.BlockRequest(id=user_id))
-        return await event.edit(f"**🚫 تم حظر المستخدم بنجاح.**")
+    # أوامر مدمجة مع الحفاظ على الشرطات السفلية
+    new_cmds = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "حظر", "فك_حظر", "ايدي", "فحص"]
 
     if text == ".الاوامر":
         plugin_cmds = []
@@ -95,9 +74,12 @@ async def rebel_main_engine(event):
             try:
                 with open(file, 'r', encoding='utf-8') as f:
                     content = f.read()
+                    # البحث عن الأوامر بدون استبدال الشرطات السفلية
                     found = re.findall(r'pattern=r"[\\/.]+\.([\w_]+)"', content)
-                    if not found: found = re.findall(r'pattern=r"\\\.([\w_]+)"', content)
-                    if found: plugin_cmds.extend([c.replace('_', ' ') for c in found])
+                    if not found:
+                        found = re.findall(r'pattern=r"\\\.([\w_]+)"', content)
+                    if found:
+                        plugin_cmds.extend(found)
             except: continue
         
         all_list = sorted(list(set(new_cmds + plugin_cmds)))
@@ -107,16 +89,21 @@ async def rebel_main_engine(event):
         msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(all_list)))} حزمة برمجية شغّالة**"
         await event.edit(msg, link_preview=False)
 
-# --- [4] نظام الحماية والردود ---
+# --- [4] نظام الحماية المطور (اسم الشخص + الصورة + العبارة) ---
 @client.on(events.NewMessage(incoming=True))
 async def security_logic(event):
     if not event.is_private: return
     data = load_data()
     user_id = event.sender_id
+    
+    # سحب اسم الشخص للترحيب به
+    sender = await event.get_sender()
+    f_name = sender.first_name if sender.first_name else "عزيزي"
+
     if user_id in SUDO_USERS or user_id in data.get("allowed", []) or user_id == (await client.get_me()).id: return
 
     if data.get("storage"):
-        try: await client.send_message(LOG_GROUP_ID, f"**📥 من:** `{user_id}`\n**💬 النص:** {event.text}")
+        try: await client.send_message(LOG_GROUP_ID, f"**📥 من:** `{f_name}` ({user_id})\n**💬 النص:** {event.text}")
         except: pass
 
     if not data.get("status"): return
@@ -128,17 +115,24 @@ async def security_logic(event):
     data["counts"] = counts
     save_data(data)
 
+    # التحذير الأول مع الصورة والاسم
     if count == 1:
-        warn_msg = f"**⚠️ تحذير (1/5): يمنع التكرار في معقل المتمرد.**\n\n— — —\n{REBEL_SIG_TEXT}"
-        try: await event.reply(warn_msg, file=REBEL_IMG)
+        warn_msg = f"**يا {f_name}، مرحباً بك في معقل المتمرد 🛡️**\n\n**⚠️ تحذير (1/5): يمنع التكرار هنا.**\n\n— — —\n{REBEL_SIG_TEXT}"
+        try: 
+            await client.send_file(event.chat_id, REBEL_IMG, caption=warn_msg, reply_to=event.id)
         except: await event.reply(warn_msg)
+    
+    # الرد الذكي (عقل فرانكو) مع الصورة والعبارة
     elif count < 5:
         franco_res = await get_franco_reply(event.text)
-        reply_with_sig = f"**{franco_res}**\n\n— — —\n{REBEL_SIG_TEXT}"
-        try: await event.reply(reply_with_sig, file=REBEL_IMG)
+        reply_with_sig = f"**يا {f_name}.. {franco_res}**\n\n— — —\n{REBEL_SIG_TEXT}"
+        try: 
+            await client.send_file(event.chat_id, REBEL_IMG, caption=reply_with_sig, reply_to=event.id)
         except: await event.reply(reply_with_sig)
+    
+    # الحظر النهائي
     elif count >= 5:
-        ban_msg = f"**🚫 تم حظرك نهائياً من التواصل مع المتمرد.**\n\n— — —\n{REBEL_SIG_TEXT}"
+        ban_msg = f"**🚫 يا {f_name}، تم حظرك نهائياً.**\n\n— — —\n{REBEL_SIG_TEXT}"
         await event.reply(ban_msg)
         await client(functions.contacts.BlockRequest(id=user_id))
 
