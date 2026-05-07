@@ -58,7 +58,7 @@ async def help_engine(event):
     
     # جلب المعرفات وتنظيفها لضمان عمل الروابط
     owner1 = getattr(config, 'OWNER_1', 'Vi_ti0').replace("@", "")
-    owner2 = getattr(config, 'OWNER_2', 'A0_O7_').replace("@", "")
+    owner2 = getattr(config, 'OWNER_2', 'A0_O7').replace("@", "")
 
     msg = "**🛡️ معقل المتمرد: حيث يلتقي التشفير بالذكاء 🦅**\n"
     msg += "— — — — — — — — — — — — —\n"
