@@ -7,7 +7,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 import config 
 
 # --- [1] إعدادات المملكة ---
-LOG_GROUP_ID = -1003586994898 # هذا الآيدي صحيح حسب صورتك
+LOG_GROUP_ID = -1003586994898 
 DB_FILE = "rebel_security.json"
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 
@@ -37,13 +37,15 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [4] محرك الأوامر (بنفس عبارتك الأصلية) ---
+# --- [4] محرك الأوامر (كل الأوامر في الشاشة الرئيسية) ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_cmds(event):
     text = event.text
-    if text.startswith((".ايدي", ".فحص")):
+    data = load_data()
+
+    # أوامر الهوية والفحص
+    if text.startswith((".ايدي", ".فحص", ".هويتي")):
         photos = await client.get_profile_photos("me", limit=1)
-        # عبارتك الأصلية كاملة
         msg = f"""
 **- مـعقل الـمتمرد الـتقني 🛡️🦅**
 — — — — — — — — — — —
@@ -57,8 +59,23 @@ async def rebel_cmds(event):
         else: await client.send_message(event.chat_id, msg)
         return
 
+    # أوامر التحكم (تفعيل/تعطيل)
+    if text.startswith((".تفعيل الحماية", ".تفعيل_الحماية")):
+        data["status"] = True
+        save_data(data)
+        await event.edit("**🛡️ تم تفعيل نظام حماية المتمرد بنجاح.**")
+    
+    elif text.startswith((".تعطيل الحماية", ".تعطيل_الحماية")):
+        data["status"] = False
+        save_data(data)
+        await event.edit("**⚠️ تم تعطيل نظام الحماية.. معقلك الآن مكشوف.**")
+
+    elif text.startswith((".انشاء تخزين", ".تفعيل القروب")):
+        await event.edit(f"**✅ تم ربط وتفعيل التخزين في الآيدي: `{LOG_GROUP_ID}`**")
+
+    # عرض الأوامر كاملة في الشاشة الرئيسية
     if text.startswith(".الاوامر"):
-        all_commands = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "رفض", "ايدي", "فحص", "تدمير"]
+        all_commands = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "رفض", "ايدي", "فحص", "تدمير", "انشاء_تخزين", "تفعيل_القروب"]
         files = ["main.py"] + glob.glob("plugins/*.py")
         for file in files:
             try:
@@ -70,36 +87,14 @@ async def rebel_cmds(event):
         msg = f"**- مـعقل الـمتمرد الـتقني 🛡️🦅**\n— — — — — — — — — — —\n"
         for i, c in enumerate(unique_cmds, 1):
             msg += f"**{z_nums(str(i))} ⇐** `.{c.replace('_', ' ')}`\n"
-        msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة**"
+        msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة برمجية شغالة**"
         await event.edit(msg)
 
-# --- [5] محرك التحكم بالحماية ---
-@client.on(events.NewMessage(outgoing=True))
-async def security_control(event):
-    data = load_data()
-    text = event.text
-    if text.startswith((".تفعيل الحماية", ".تفعيل_الحماية")):
-        data["status"] = True
-        save_data(data)
-        await event.edit("**🛡️ تم تفعيل نظام حماية المتمرد بنجاح.**")
-    elif text.startswith((".تعطيل الحماية", ".تعطيل_الحماية")):
-        data["status"] = False
-        save_data(data)
-        await event.edit("**⚠️ تم تعطيل نظام الحماية.. معقلك الآن مكشوف.**")
-    elif text.startswith(".سماح") and event.is_reply:
-        reply = await event.get_reply_message()
-        if reply.sender_id not in data["allowed"]:
-            data["allowed"].append(reply.sender_id)
-            save_data(data)
-            await event.edit(f"**✅ تم السماح لـ `{reply.sender_id}` بالمراسلة.**")
-
-# --- [6] نظام التخزين والحماية (تم التعديل لضمان العمل) ---
+# --- [5] نظام التخزين والحماية (تمت إضافة التحذير 1/5) ---
 @client.on(events.NewMessage(incoming=True))
 async def security_and_logs(event):
     data = load_data()
-    # أهم سطر لمنع التعليق والتكرار
-    if event.chat_id == LOG_GROUP_ID: return
-    if not event.is_private: return
+    if event.chat_id == LOG_GROUP_ID or not event.is_private: return
     
     user = await event.get_sender()
     if not user or user.bot: return
@@ -110,23 +105,26 @@ async def security_and_logs(event):
         u_mention = f"@{user.username}" if user.username else user.first_name
         log_text = f"<b>📥 رسالة جديدة:</b>\n👤: {u_mention}\n🆔: <code>{user_id}</code>\n💬: {event.text or 'وسائط'}"
         await client.send_message(LOG_GROUP_ID, log_text, parse_mode='html')
-        if event.media: await client.send_file(LOG_GROUP_ID, event.media)
     except: pass
 
-    # الحماية
-    if int(user_id) in data["allowed"] or not data["status"]: return
-    counts = data["counts"]
+    # الحماية والتحذير
+    if int(user_id) in data.get("allowed", []) or not data.get("status"): return
+    
+    counts = data.get("counts", {})
     count = counts.get(user_id, 0) + 1
     counts[user_id] = count
+    data["counts"] = counts
     save_data(data)
 
     if count == 1:
-        await event.reply("**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام.")
+        # رسالة التحذير التي طلبتها
+        await event.reply("**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام والتكرار، معقلك مراقب.**")
+    
     elif count >= 5:
-        await event.reply("**❌ تم حظرك تلقائياً.**")
+        await event.reply("**❌ تم حظرك تلقائياً من دخول المعقل.**")
         await client(functions.contacts.BlockRequest(id=int(user_id)))
 
-# --- [7] محرك التلفيش ---
+# --- [6] محرك التلفيش وتحديث الوقت ---
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.تدمير (\d+) (.*)"))
 async def flood_destroy(event):
     count, text = int(event.pattern_match.group(1)), event.pattern_match.group(2)
@@ -135,7 +133,6 @@ async def flood_destroy(event):
         await client.send_message(event.chat_id, text)
         await asyncio.sleep(0.05)
 
-# --- [8] الإقلاع وتحديث الاسم ---
 async def start_rebel():
     await client.start()
     async def time_updater():
