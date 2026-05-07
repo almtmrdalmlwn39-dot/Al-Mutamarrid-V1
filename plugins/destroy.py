@@ -1,56 +1,46 @@
-from telethon import events, functions, types
-from telethon.tl.functions.channels import EditBannedRequest, EditTitleRequest
-from telethon.tl.types import ChatBannedRights
-import asyncio
-# السطر الأهم لربط الملف بالبوت الأساسي
-from __main__ import client 
-
-# حقوق السيطرة الكاملة
-BANNED_RIGHTS = ChatBannedRights(
-    until_date=None, 
-    view_messages=True, 
-    send_messages=True, 
-    send_media=True, 
-    send_stickers=True, 
-    send_gifs=True, 
-    send_games=True, 
-    send_inline=True, 
-    embed_links=True
-)
-
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.تدمير"))
-async def royal_destroy(event):
-    chat = event.chat_id
-    await event.edit("**- جاري احكام السيطرة على المجموعة... ⚠️**")
-    
-    # 1. تغيير اسم القروب لهيبة المتمرد
-    try:
-        await client(EditTitleRequest(channel=chat, title="تم التفليش بواسطة المتمرد 🦅"))
-    except: pass
-
-    # 2. بدء الطرد الجماعي السريع
-    await event.respond("**- بدأ الانفجار.. لا مكان للضعفاء هنا 🧨**")
+@client.on(events.NewMessage(outgoing=True, pattern=r"\.تلفيش"))
+async def rebel_destruction_engine(event):
+    chat = await event.get_chat()
+    admin_id = (await client.get_me()).id
     count = 0
+    
+    await event.edit("**🛡️ جاري إحكام السيطرة على المجموعة... ⚠️**")
+    await asyncio.sleep(1)
+    await event.edit("**🧨 بدأ الانفجار.. لا مكان للضعفاء هنا 🧨**")
+    
+    # سحب الأعضاء بشكل قسري ومباشر من السيرفر
     async for user in client.iter_participants(chat):
-        if user.id == (await client.get_me()).id: continue
+        # تخطي نفسك عشان ما ينحظر الحساب المشغل
+        if user.id == admin_id or user.is_self:
+            continue
+            
         try:
-            await client(EditBannedRequest(chat, user.id, BANNED_RIGHTS))
+            # أقوى أمر حظر نهائي في تليجرام
+            await client(functions.channels.EditBannedRequest(
+                channel=chat,
+                participant=user.id,
+                banned_rights=types.ChatBannedRights(
+                    until_date=None,
+                    view_messages=True,
+                    send_messages=True,
+                    send_media=True,
+                    send_stickers=True,
+                    send_gifs=True,
+                    send_games=True,
+                    send_inline=True,
+                    embed_links=True
+                )
+            ))
             count += 1
-            # ارسال رسالة تهديد كل 10 اشخاص لزيادة الهياط
-            if count % 10 == 0:
-                await client.send_message(chat, f"**- المتمرد يكتسح المكان.. تم سحق {count} ضحية.**")
-        except: continue
+            # تحديث العداد كل 5 أعضاء عشان تلاحظ الحركة
+            if count % 5 == 0:
+                await event.edit(f"**🔥 جاري الانفجار.. الضحايا: {z_nums(str(count))}**")
+        except Exception:
+            # يتخطى المشرفين أو الحسابات المحمية بصمت
+            continue
 
-    # 3. العبارة الختامية المرعبة
-    await event.respond(
-        f"**- انتهت المهمة بنجاح ✅**\n"
-        f"**- الارض اصبحت قاعا صفصفا بعد مرور المتمرد.**\n"
-        f"**- اجمالي الضحايا: {count}**\n"
-        f"**- المتمرد التقني مر من هنا 🦅**"
-    )
-
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.غادر"))
-async def leave_all(event):
-    await event.edit("**- المتمرد لا يبقى في اماكن لا تليق به.. وداعا 🚶‍♂️**")
-    await asyncio.sleep(2)
-    await client(functions.channels.LeaveChannelRequest(event.chat_id))
+    msg = f"**✅ انتهت المهمة بنجاح**\n"
+    msg += f"**- الأرض أصبحت قاعاً صفصفاً بعد مرور المتمرد.**\n"
+    msg += f"**- اجمالي الضحايا: {z_nums(str(count))}**\n"
+    msg += f"**- المتمرد التقني مر من هنا 🦅**"
+    await event.edit(msg)
