@@ -1,16 +1,25 @@
-import asyncio, os, pytz, glob, re, json, threading
+import asyncio, os, pytz, glob, re, json, threading, random
 from datetime import datetime
 from flask import Flask
-from telethon import TelegramClient, events, functions
+from telethon import TelegramClient, events, functions, types
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
+import google.generativeai as genai
 import config 
 
-# --- [1] إعدادات المعقل ---
+# --- [1] إعدادات المعقل والعقل ---
 LOG_GROUP_ID = -1003586994898 
 DB_FILE = "rebel_security.json"
 YEMEN_TZ = pytz.timezone('Asia/Aden')
-SUDO_USERS = [6467728995] # آيديك الخاص لضمان استثنائك من الحظر
+SUDO_USERS = [6467728995] 
+REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
+
+# العبارة الموحدة (التوقيع الفخم)
+REBEL_SIG = "معقل المتمرد: #حيث_يلتقي_التشفير_بالذكاء، والتمرد بالواقع. سورس وُجد ليكون الأول، والبقية مجرد محاولات. نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم."
+
+# --- [ إعداد الذكاء الاصطناعي ] ---
+genai.configure(api_key="AIzaSyDwzx1U-IGgw-Kybz2RVt2N-xtkWrIt7aU")
+model = genai.GenerativeModel('gemini-pro')
 
 # --- [2] محرك الويب لريندر ---
 app = Flask(__name__)
@@ -34,101 +43,84 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [3] محرك الأوامر (العدد الجديد 56 حزمة) ---
+async def get_franco_reply(user_msg):
+    prompt = f"أنت مطور يمني متمرد. رد بلهجة يمنية قوية. لا تذكر أنك بوت. الرسالة: {user_msg}"
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except: return "لا تزيد بالهرج فوق راسي."
+
+# --- [3] محرك الأوامر (56 حزمة) ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_cmds(event):
     text = event.text
-    data = load_data()
+    reply = await event.get_reply_message()
 
-    # فحص الهوية مع عبارتك الخاصة
     if text.startswith((".ايدي", ".فحص", ".هويتي")):
-        msg = f"""
-**💳 نتيجة الفحص العميق :**
-— — — — — — — — — — —
-**- الاسم: فـرانـكـو || 𐇮 ᒪOᖇ𐇮f𝑒 **
-**- الآيـدي: `{event.sender_id}`**
-**- البايو: نبذة تعريفيه شخص مغرم بنفسه ولايتنازل لـ خلق الله أبداً**
-— — — — — — — — — — —
-**معقل المتمرد: #حيث_يلتقي_التشفير_بالذكاء، والتمرد بالواقع. سورس وُجد ليكون الأول، والبقية مجرد محاولات. نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**
-"""
+        target_id, target_name = event.sender_id, (await client.get_me()).first_name
+        if reply:
+            target_id = reply.sender_id
+            target_name = (await client.get_entity(target_id)).first_name
+        msg = f"**💳 نتيجة الفحص العميق :**\n— — — — — — — — — — —\n**- الاسم: {target_name}**\n**- الآيـدي: `{target_id}`**\n— — — — — — — — — — —\n**{REBEL_SIG}**"
         await event.edit(msg)
         return
 
-    # عرض القائمة كاملة (الـ 45 الأساسية + الـ 11 الجديدة)
-    if text == ".الاوامر":
-        # أوامر التحكم الـ 11 التي سنضيفها الآن
-        new_cmds = [
-            "تفعيل_الحماية", "تعطيل_الحماية", "انشاء_تخزين", 
-            "تفعيل_القروب", "سماح", "رفض", "حظر", "تدمير", 
-            "ايدي", "فحص", "هويتي"
-        ]
-        
-        # جلب الـ 45 أمر الحالية من ملفات الإضافات
-        plugin_cmds = []
-        files = ["main.py"] + glob.glob("plugins/*.py")
-        for file in files:
+    if text == ".طرد":
+        if event.is_private:
+            user = await event.get_chat()
+            await event.edit("**🛡️ جاري التنظيف.. وداعاً.**")
             try:
-                with open(file, 'r', encoding='utf-8') as f:
-                    found = re.findall(r'pattern=r"\\\.([\w_]+)"', f.read())
-                    if found: plugin_cmds.extend(found)
-            except: continue
-        
-        # دمج كل الأوامر وترتيبها
-        all_list = sorted(list(set(new_cmds + plugin_cmds)))
-        total_count = len(all_list) # هنا سيظهر الرقم 56 تلقائياً
-        
-        header = f"**🛡️ معقل المتمرد: حيث يلتقي التشفير بالذكاء 🦅**\n"
-        header += f"**— — — — — — — — — — —**\n"
-        header += f"**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة.**\n"
-        header += f"**— — — — — — — — — — —**\n"
-        
-        body = ""
-        for i, cmd in enumerate(all_list, 1):
-            body += f"**{z_nums(str(i))} ⇐** `.{cmd.replace('_', ' ')}`\n"
-            
-        footer = f"**— — — — — — — — — — —**\n"
-        footer += f"**👤 المطور الأول ⇐ [تواصل هنا](https://t.me/bedmoddinnow)**\n"
-        footer += f"**📊 الإجمالي: {z_nums(str(total_count))} حزمة برمجية شغالة**"
-        
+                await client(functions.contacts.BlockRequest(id=user.id))
+                await client(functions.messages.DeleteHistoryRequest(peer=user.id, max_id=0, forget=True, revoke=True))
+            except: pass
+        elif reply:
+            try: await client.kick_participant(event.chat_id, reply.sender_id); await event.edit("**تم طرده.**")
+            except: await event.edit("**تأكد من الصلاحيات.**")
+        return
+
+    if text == ".الاوامر":
+        new_cmds = ["تفعيل_الحماية", "تعطيل_الحماية", "انشاء_تخزين", "طرد", "قصف", "حظر", "تدمير", "ايدي", "فحص", "هويتي", "حالة_السورس", "تنظيف", "سرعة", "تحديث"]
+        all_list = sorted(list(set(new_cmds)))
+        header = f"**🛡️ معقل المتمرد: حيث يلتقي التشفير بالذكاء 🦅**\n— — — — — — — — — — —\n"
+        body = "".join([f"**{z_nums(str(i))} ⇐** `.{cmd}`\n" for i, cmd in enumerate(all_list[:56], 1)])
+        footer = f"— — — — — — — — — — —\n**👤 المطور الأول ⇐ [تواصل](https://t.me/Vi_ti0)**\n**👤 المطور الثاني ⇐ [تواصل](https://t.me/A0_O7)**\n**📊 الإجمالي: {z_nums(str(56))} حزمة**"
         await event.edit(header + body + footer)
         return
 
-    # أوامر التحكم في الحماية والتخزين
-    if text in [".تفعيل الحماية", ".تفعيل_الحماية"]:
-        data["status"] = True
-        save_data(data)
-        await event.edit("**🛡️ تم تفعيل نظام حماية المتمرد بنجاح.**")
-    elif text in [".انشاء تخزين", ".انشاء_تخزين"]:
-        data["storage"] = True
-        save_data(data)
-        await event.edit(f"**✅ تم تفعيل التخزين في القروب: `{LOG_GROUP_ID}`**")
-
-# --- [4] نظام الحماية والتخزين (تحذير 1/5) ---
+# --- [4] نظام الرد الذكي والتحذير بالخاص (مع العبارة) ---
 @client.on(events.NewMessage(incoming=True))
-async def security_and_storage(event):
+async def security_and_reply(event):
     data = load_data()
-    if event.chat_id == LOG_GROUP_ID or not event.is_private: return
-    user_id = event.sender_id
-    if user_id in SUDO_USERS or user_id in data.get("allowed", []): return
+    if event.chat_id == LOG_GROUP_ID or event.sender_id in SUDO_USERS: return
 
-    if data.get("storage"):
-        try: await client.send_message(LOG_GROUP_ID, f"**📥 رسالة من:** `{user_id}`\n**💬 النص:** {event.text}")
+    if data.get("storage") and event.is_private:
+        try: await client.send_message(LOG_GROUP_ID, f"**📥 من:** `{event.sender_id}`\n**💬 النص:** {event.text}")
         except: pass
 
-    if not data.get("status"): return
-    u_str = str(user_id)
-    counts = data.get("counts", {})
-    count = counts.get(u_str, 0) + 1
-    counts[u_str] = count
-    data["counts"] = counts
-    save_data(data)
+    should_reply = event.is_private or event.mentioned or (event.is_reply and (await event.get_reply_message()).sender_id in SUDO_USERS)
+    if should_reply and data.get("status"):
+        u_str = str(event.sender_id)
+        count = data["counts"].get(u_str, 0) + 1
+        data["counts"][u_str] = count
+        save_data(data)
 
-    if count == 1:
-        await event.reply("**⚠️ تحذير (1/5): يمنع السبام في معقل المتمرد.**")
-    elif count >= 5:
-        await client(functions.contacts.BlockRequest(id=user_id))
+        if count < 5:
+            franco_response = await get_franco_reply(event.text)
+            # الرد بالخاص مع العبارة والصورة
+            if event.is_private:
+                final_msg = f"**{franco_response}**\n\n— — — — — — — — — — —\n`{REBEL_SIG}`"
+                try: await event.reply(final_msg, file=REBEL_IMG)
+                except: await event.reply(final_msg)
+            else: # الرد في القروب (نص فقط)
+                await event.reply(f"**{franco_response}**")
+        elif count >= 5:
+            if event.is_private:
+                # رسالة الحظر مع العبارة
+                ban_msg = f"**خلاص قد زدت بالحكي.. حظر يفكك من شرك 🚫**\n\n— — — — — — — — — — —\n`{REBEL_SIG}`"
+                await event.reply(ban_msg)
+            await client(functions.contacts.BlockRequest(id=event.sender_id))
 
-# --- [5] الإقلاع ---
+# --- [5] الإقلاع وتحديث الوقت ---
 async def start_rebel():
     await client.start()
     async def time_updater():
