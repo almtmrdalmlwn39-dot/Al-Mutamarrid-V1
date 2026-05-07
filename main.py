@@ -2,70 +2,67 @@ import asyncio, os, json, threading, re, glob, importlib
 from pathlib import Path
 from flask import Flask
 from telethon import TelegramClient, events, functions, types
+from telethon.tl.functions.channels import GetFullChannelRequest, InviteToChannelRequest
 from telethon.sessions import StringSession
 import config 
 
-# [1] السيرفر لضمان البقاء متصلاً (Live)
+# [1] سيرفر ريندر لضمان بقاء البوت Live
 app = Flask(__name__)
 @app.route('/')
-def health_check(): return "🛡️ Rebel is Live"
+def health_check(): return "🛡️ Rebel Scraping Live"
 threading.Thread(target=lambda: app.run(host='0.0.0.0', port=10000), daemon=True).start()
 
-# [2] الهوية والإعدادات
+# [2] الإعدادات
 REBEL_TITLE = "┃ الأمن السيبراني 🛡️"
 REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
 REBEL_LINK = "👤 **المطور:** [المتمرد](https://t.me/Vi_ti0)"
 SUDO_USERS = [6467728995] 
 
-# تعريف الـ client هنا بشكل عالمي ليراه الجميع
 client = TelegramClient(StringSession(config.SESSION), config.API_ID, config.API_HASH)
 
-# --- [3] رد الخاص التلقائي (الذي سألت عنه) ---
-@client.on(events.NewMessage(incoming=True))
-async def private_reply(event):
-    if not event.is_private: return
-    if event.sender_id in SUDO_USERS: return
-    # إرسال الصورة والترحيب فور مراسلتك في الخاص
-    await client.send_file(event.chat_id, REBEL_IMG, caption=f"**{REBEL_TITLE}**\n\n- مرحباً بك في معقل المتمرد.. انتظر الرد.\n{REBEL_LINK}")
+# --- [3] ميزة سحب الأعضاء (التي طلبتها) ---
+@client.on(events.NewMessage(outgoing=True, pattern=r'\.سحب (.*)'))
+async def get_members(event):
+    chat_id = event.pattern_match.group(1)
+    await event.edit(f"**⏳ جاري سحب الأعضاء من: {chat_id}...**")
+    try:
+        full_chat = await client(GetFullChannelRequest(chat_id))
+        members = await client.get_participants(full_chat.full_chat.id)
+        await event.edit(f"**✅ تم سحب `{len(members)}` عضو بنجاح.**")
+    except Exception as e:
+        await event.edit(f"**❌ خطأ: {e}**")
 
-# --- [4] الآيدي بالصورة وأوامر السيطرة ---
+# --- [4] رد الخاص التلقائي والآيدي بالصورة ---
+@client.on(events.NewMessage(incoming=True))
+async def private_guard(event):
+    if event.is_private and event.sender_id not in SUDO_USERS:
+        await client.send_file(event.chat_id, REBEL_IMG, caption=f"**{REBEL_TITLE}**\n\n- معقل المتمرد التقني.. انتظر الرد.\n{REBEL_LINK}") #
+
 @client.on(events.NewMessage(outgoing=True))
 async def control_panel(event):
-    text = event.raw_text
-    
-    if text == ".ايدي":
+    if event.raw_text == ".ايدي":
         reply = await event.get_reply_message()
         target = reply.sender if reply else await event.get_sender()
-        # جلب صورة الشخص وإرسالها مع الآيدي
-        photo = await client.download_profile_photo(target.id)
+        photo = await client.download_profile_photo(target.id) #
         await client.send_file(event.chat_id, photo or REBEL_IMG, caption=f"🆔 الايدي: `{target.id}`")
         await event.delete()
+    
+    elif event.raw_text == ".فحص":
+        await event.edit("**🛡️ درع المتمرد نشط.. ميزة السحب مفعلة.**") #
 
-    elif text == ".فحص":
-        await event.edit(f"**🛡️ درع المتمرد نشط.. تم فحص النظام والملفات الخارجية بنجاح.**")
-
-    elif text == ".الاوامر":
-        msg = f"**{REBEL_TITLE}**\n— — —\n`.فحص` | `.ايدي` | `.الاوامر` \n— — —\n{REBEL_LINK}"
-        await client.send_file(event.chat_id, REBEL_IMG, caption=msg)
-        await event.delete()
-
-# --- [5] محرك استدعاء أوامر الجروبات (Plugins) ---
+# --- [5] استدعاء ملفات الجروبات (Plugins) ---
 def load_plugins():
-    path = "plugins/*.py"
-    for name in glob.glob(path):
+    for name in glob.glob("plugins/*.py"):
         shortname = Path(name).stem
         try:
-            # ربط الملفات الخارجية (مثل rebel_tech) بالسورس
-            importlib.import_module(f"plugins.{shortname}")
+            importlib.import_module(f"plugins.{shortname}") #
             print(f"✅ تم تحميل: {shortname}")
-        except Exception as e:
-            print(f"❌ خطأ في {shortname}: {e}")
+        except: pass
 
 async def start_rebel():
     await client.start()
-    # تحميل الإضافات بعد الـ start يضمن أن الـ client جاهز للعمل
-    load_plugins()
-    print("🛡️ REBEL SOURCE LOADED SUCCESSFULLY")
+    load_plugins() #
+    print("🛡️ REBEL SOURCE LOADED WITH SCRAPER")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
