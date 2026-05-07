@@ -7,7 +7,7 @@ from telethon.tl.functions.account import UpdateProfileRequest
 import config 
 
 # --- [1] إعدادات المملكة ---
-LOG_GROUP_ID = -1003586994898
+LOG_GROUP_ID = -1003586994898 # هذا الآيدي صحيح حسب صورتك
 DB_FILE = "rebel_security.json"
 YEMEN_TZ = pytz.timezone('Asia/Aden')
 
@@ -37,13 +37,13 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [4] محرك الأوامر (ايدي + فحص + الاوامر) ---
+# --- [4] محرك الأوامر (بنفس عبارتك الأصلية) ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_cmds(event):
     text = event.text
-    # أوامر الآيدي والفحص مع الصورة
     if text.startswith((".ايدي", ".فحص")):
         photos = await client.get_profile_photos("me", limit=1)
+        # عبارتك الأصلية كاملة
         msg = f"""
 **- مـعقل الـمتمرد الـتقني 🛡️🦅**
 — — — — — — — — — — —
@@ -57,7 +57,6 @@ async def rebel_cmds(event):
         else: await client.send_message(event.chat_id, msg)
         return
 
-    # قائمة الأوامر
     if text.startswith(".الاوامر"):
         all_commands = ["تفعيل_الحماية", "تعطيل_الحماية", "سماح", "رفض", "ايدي", "فحص", "تدمير"]
         files = ["main.py"] + glob.glob("plugins/*.py")
@@ -74,22 +73,19 @@ async def rebel_cmds(event):
         msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(unique_cmds)))} حزمة**"
         await event.edit(msg)
 
-# --- [5] محرك التحكم بالحماية المطور ---
+# --- [5] محرك التحكم بالحماية ---
 @client.on(events.NewMessage(outgoing=True))
 async def security_control(event):
     data = load_data()
     text = event.text
-    
     if text.startswith((".تفعيل الحماية", ".تفعيل_الحماية")):
         data["status"] = True
         save_data(data)
         await event.edit("**🛡️ تم تفعيل نظام حماية المتمرد بنجاح.**")
-    
     elif text.startswith((".تعطيل الحماية", ".تعطيل_الحماية")):
         data["status"] = False
         save_data(data)
         await event.edit("**⚠️ تم تعطيل نظام الحماية.. معقلك الآن مكشوف.**")
-    
     elif text.startswith(".سماح") and event.is_reply:
         reply = await event.get_reply_message()
         if reply.sender_id not in data["allowed"]:
@@ -97,11 +93,14 @@ async def security_control(event):
             save_data(data)
             await event.edit(f"**✅ تم السماح لـ `{reply.sender_id}` بالمراسلة.**")
 
-# --- [6] نظام التخزين والحماية التلقائية ---
+# --- [6] نظام التخزين والحماية (تم التعديل لضمان العمل) ---
 @client.on(events.NewMessage(incoming=True))
 async def security_and_logs(event):
     data = load_data()
-    if not event.is_private or event.out: return
+    # أهم سطر لمنع التعليق والتكرار
+    if event.chat_id == LOG_GROUP_ID: return
+    if not event.is_private: return
+    
     user = await event.get_sender()
     if not user or user.bot: return
     user_id = str(event.sender_id)
@@ -122,8 +121,7 @@ async def security_and_logs(event):
     save_data(data)
 
     if count == 1:
-        cap = f"**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام."
-        await event.reply(cap)
+        await event.reply("**- أهلاً بك في معقل المتمرد التقني 🛡️**\n— — —\n**⚠️ تحذير (1/5):** يمنع السبام.")
     elif count >= 5:
         await event.reply("**❌ تم حظرك تلقائياً.**")
         await client(functions.contacts.BlockRequest(id=int(user_id)))
