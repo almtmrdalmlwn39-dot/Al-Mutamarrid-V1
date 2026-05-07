@@ -8,16 +8,6 @@ import google.generativeai as genai
 import config 
 
 # --- [1] الهوية والذكاء الاصطناعي ---
-REBEL_LOGO = """
-       .---.        🛡️ THE REBEL CYBER SOURCE 🛡️
-      /     \       ---------------------------
-      | 0 0 |       [#] STATUS: INVINCIBLE
-      |  ^  |       [#] LOGIC: QUANTUM REBEL
-      / \_  /       [#] RULE: NO MERCY FOR BUGS
-    ./ /   \ \.     ---------------------------
-   "القمة تتسع للمتمرد فقط.."
-"""
-# عبارتك الأصلية ثابتة كما طلبت
 REBEL_SIG_TEXT = "**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**"
 REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
 
@@ -50,41 +40,49 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-async def get_franco_reply(user_msg):
-    prompt = f"أنت مطور يمني ذكي ومتمرد. رد بلهجة يمنية قوية ومختصرة جداً. الرسالة: {user_msg}"
-    try:
-        response = model.generate_content(prompt)
-        return response.text
-    except: return "لا تزيد بالهرج فوق راسي."
-
-# --- [3] محرك الأوامر (حافظت على الشرطات والعداد كما في كودك) ---
+# --- [3] محرك الأوامر والايدي بالصورة ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_main_engine(event):
     text = event.text
     data = load_data()
-    reply = await event.get_reply_message()
     
-    # القائمة الأساسية مع الحفاظ على الشرطات
-    new_cmds = ["تفعيل الحماية", "تعطيل الحماية", "سماح", "حظر", "فك حظر", "ايدي", "فحص"]
+    # --- أمر الايدي بالصورة ---
+    if text.startswith(".ايدي"):
+        reply = await event.get_reply_message()
+        target = reply.sender if reply else await event.get_sender()
+        
+        # تحديد الرتبة
+        rank = "المالك" if target.id in SUDO_USERS else "عضو"
+        if event.is_group:
+            permissions = await client.get_permissions(event.chat_id, target)
+            if permissions.is_admin: rank = "أدمن"
+            if permissions.is_creator: rank = "المالك"
 
-    if text == ".تفعيل الحماية":
-        data["status"] = True
-        save_data(data)
-        return await event.edit(f"**🛡️ تم تفعيل نظام حماية المتمرد.**\n\n{REBEL_SIG_TEXT}")
+        info = f"**👤 الاسم:** {target.first_name}\n"
+        info += f"**🆔 الايدي:** `{target.id}`\n"
+        info += f"**🎖️ الرتبة:** {rank}\n"
+        info += f"**🦅 السورس:** المتمرد التقني\n\n{REBEL_SIG_TEXT}"
+        
+        try:
+            photo = await client.download_profile_photo(target.id)
+            await client.send_file(event.chat_id, photo, caption=info, reply_to=reply.id if reply else event.id)
+            if photo: os.remove(photo)
+            await event.delete()
+        except:
+            await event.edit(info)
 
-    if text == ".الاوامر":
+    # --- عرض الأوامر ---
+    elif text == ".الاوامر":
+        new_cmds = ["تفعيل الحماية", "تعطيل الحماية", "سماح", "حظر", "فك حظر", "ايدي", "فحص"]
         plugin_cmds = []
         files = ["main.py"] + glob.glob("plugins/*.py") + glob.glob("plugins/*/*.py")
         for file in files:
             try:
                 with open(file, 'r', encoding='utf-8') as f:
                     content = f.read()
-                    # استخراج الأوامر بالشرطات كما طلبت
                     found = re.findall(r'pattern=r"[\\/.]+\.([\w_]+)"', content)
-                    if not found:
-                        found = re.findall(r'pattern=r"\\\.([\w_]+)"', content)
-                    if found:
-                        plugin_cmds.extend(found)
+                    if not found: found = re.findall(r'pattern=r"\\\.([\w_]+)"', content)
+                    if found: plugin_cmds.extend(found)
             except: continue
         
         all_list = sorted(list(set(new_cmds + plugin_cmds)))
@@ -94,25 +92,20 @@ async def rebel_main_engine(event):
         msg += f"— — —\n**📊 الإجمالي: {z_nums(str(len(all_list)))} حزمة برمجية شغّالة**"
         await event.edit(msg, link_preview=False)
 
-# --- [4] نظام الحماية والردود (معدل للترحيب وإصلاح الصورة) ---
+# --- [4] نظام الحماية والعد الصحيح في الخاص ---
 @client.on(events.NewMessage(incoming=True))
 async def security_logic(event):
     if not event.is_private: return
     data = load_data()
     user_id = event.sender_id
-
-    # سحب اسم الشخص لترحيب مخصص
+    
     sender = await event.get_sender()
-    f_name = sender.first_name if sender.first_name else "عزيزي"
+    f_name = sender.first_name if sender.first_name else "المستخدم"
 
     if user_id in SUDO_USERS or user_id in data.get("allowed", []) or user_id == (await client.get_me()).id: return
-
-    if data.get("storage"):
-        try: await client.send_message(LOG_GROUP_ID, f"**📥 من:** `{f_name}` ({user_id})\n**💬 النص:** {event.text}")
-        except: pass
-
     if not data.get("status"): return
     
+    # تحديث العداد وحفظه فوراً
     u_str = str(user_id)
     counts = data.get("counts", {})
     count = counts.get(u_str, 0) + 1
@@ -120,48 +113,27 @@ async def security_logic(event):
     data["counts"] = counts
     save_data(data)
 
-    # التحذير الأول: ترحيب باسم الشخص + الصورة فوق النص
     if count == 1:
-        warn_msg = f"**يا {f_name}، مرحباً بك في معقل المتمرد 🛡️**\n\n**⚠️ تحذير (1/5): يمنع التكرار هنا.**\n\n— — —\n{REBEL_SIG_TEXT}"
-        try: 
-            await client.send_file(event.chat_id, REBEL_IMG, caption=warn_msg, reply_to=event.id)
-        except: 
-            await event.reply(warn_msg)
-    
-    # الرد الذكي مع عقل فرانكو والصورة
+        msg = f"**يا {f_name}، مرحباً بك في معقل المتمرد 🛡️**\n**⚠️ تحذير ({z_nums(str(count))}/٥): يمنع التكرار.**\n\n{REBEL_SIG_TEXT}"
+        await client.send_file(event.chat_id, REBEL_IMG, caption=msg)
     elif count < 5:
-        franco_res = await get_franco_reply(event.text)
-        reply_with_sig = f"**يا {f_name}.. {franco_res}**\n\n— — —\n{REBEL_SIG_TEXT}"
-        try: 
-            await client.send_file(event.chat_id, REBEL_IMG, caption=reply_with_sig, reply_to=event.id)
-        except: 
-            await event.reply(reply_with_sig)
-
+        prompt = f"رد بلهجة يمنية فخمة ترحب بالضيف وتذكره أن التكرار ممنوع. الرسالة: {event.text}"
+        try:
+            res = model.generate_content(prompt)
+            reply = res.text
+        except: reply = "أهلاً بك، التكرار ممنوع في معقلنا."
+        
+        full_msg = f"**يا {f_name}.. {reply}**\n**⚠️ تنبيه ({z_nums(str(count))}/٥)**\n\n{REBEL_SIG_TEXT}"
+        await client.send_file(event.chat_id, REBEL_IMG, caption=full_msg)
     elif count >= 5:
-        ban_msg = f"**🚫 يا {f_name}، تم حظرك نهائياً.**\n\n— — —\n{REBEL_SIG_TEXT}"
-        await event.reply(ban_msg)
+        await event.reply(f"**🚫 تم حظرك لتجاوزك حد التكرار.**")
         await client(functions.contacts.BlockRequest(id=user_id))
 
-# --- [5] الإقلاع وتحميل الإضافات (نفس هيكلك الأصلي) ---
+# --- [5] التشغيل وتحميل الإضافات ---
 async def start_rebel():
-    print(REBEL_LOGO)
     await client.start()
-    
-    async def profile_engine():
-        while True:
-            try:
-                tz = pytz.timezone('Asia/Aden')
-                tm = z_nums(datetime.now(tz).strftime("%I:%M"))
-                me = await client.get_me()
-                clean_name = me.first_name.split(" | ")[0]
-                await client(UpdateProfileRequest(first_name=f"{clean_name} | {tm}"))
-            except: pass
-            await asyncio.sleep(300)
-    
-    asyncio.create_task(profile_engine())
-
     if os.path.exists("plugins"):
-        for name in glob.glob("plugins/*.py") + glob.glob("plugins/*/*.py"):
+        for name in glob.glob("plugins/*.py"):
             path = name.replace("/", ".").replace("\\", ".").replace(".py", "")
             try:
                 spec = importlib.util.spec_from_file_location(path, name)
@@ -169,7 +141,6 @@ async def start_rebel():
                 mod.client = client 
                 spec.loader.exec_module(mod)
             except: pass
-            
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
