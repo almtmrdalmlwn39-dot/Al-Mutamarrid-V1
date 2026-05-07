@@ -4,6 +4,7 @@ from flask import Flask
 from telethon import TelegramClient, events, functions
 from telethon.sessions import StringSession
 from telethon.tl.functions.account import UpdateProfileRequest
+import google.generativeai as genai
 import config 
 
 # --- [1] واجهة المتمرد السيبرانية (ASCII ART) ---
@@ -17,10 +18,15 @@ REBEL_LOGO = """
    "القمة تتسع للمتمرد فقط.."
 """
 
+# إعداد عقل فرانكو (الذكاء الاصطناعي)
+genai.configure(api_key="AIzaSyDwzx1U-IGgw-Kybz2RVt2N-xtkWrIt7aU")
+model = genai.GenerativeModel('gemini-pro')
+
 # --- [2] إعدادات الحماية والتخزين وريندر ---
 DB_FILE = "rebel_security.json"
 LOG_GROUP_ID = -1003586994898 
 SUDO_USERS = [6467728995] 
+REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
 
 app = Flask(__name__)
 @app.route('/')
@@ -43,16 +49,23 @@ def load_data():
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
+async def get_franco_reply(user_msg):
+    prompt = f"أنت مطور يمني ذكي. رد بلهجة يمنية قوية ومختصرة جداً. الرسالة: {user_msg}"
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except: return "منعاه لا تزيد بالهرج."
+
 # --- [3] محرك الأوامر (العبارة الفخمة + الحسابات + 56 حزمة) ---
 @client.on(events.NewMessage(outgoing=True))
 async def rebel_main_engine(event):
     text = event.text
     data = load_data()
+    reply = await event.get_reply_message()
 
-    # أوامر التحكم الـ 11 الجديدة (برمجياً)
-    new_cmds = ["تفعيل_الحماية", "تعطيل_الحماية", "انشاء_تخزين", "تفعيل_القروب", "سماح", "رفض", "حظر", "تدمير", "ايدي", "فحص", "هويتي"]
+    # أوامر التحكم الـ 11 الجديدة
+    new_cmds = ["تفعيل الحماية", "تعطيل الحماية", "انشاء تخزين", "ايدي", "فحص", "طرد"]
 
-    # تنفيذ الأوامر
     if text == ".تفعيل الحماية":
         data["status"] = True
         save_data(data)
@@ -63,6 +76,12 @@ async def rebel_main_engine(event):
         save_data(data)
         return await event.edit(f"**✅ تم ربط التخزين بالقروب: `{LOG_GROUP_ID}`**")
 
+    # أمر الآيدي المطور (لا يحذف)
+    if text.startswith((".ايدي", ".فحص")):
+        target_id = reply.sender_id if reply else event.sender_id
+        await event.edit(f"**💳 الآيـدي: `{target_id}`**")
+        return
+
     # عرض القائمة الشاملة
     if text == ".الاوامر":
         plugin_cmds = []
@@ -71,7 +90,7 @@ async def rebel_main_engine(event):
             try:
                 with open(file, 'r', encoding='utf-8') as f:
                     found = re.findall(r'pattern=r"\\\.([\w_]+)"', f.read())
-                    if found: plugin_cmds.extend(found)
+                    if found: plugin_cmds.extend([c.replace('_', ' ') for c in found])
             except: continue
         
         all_list = sorted(list(set(new_cmds + plugin_cmds)))
@@ -82,24 +101,20 @@ async def rebel_main_engine(event):
         msg += "— — — — — — — — — — — — —\n"
         msg += "**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق، وهيبةٌ لا تُهزم.**\n"
         msg += "— — — — — — — — — — — — —\n"
-        
         for i, cmd in enumerate(all_list, 1):
-            msg += f"**{z_nums(str(i))} ⇐** `.{cmd.replace('_', ' ')}`\n"
-        
+            msg += f"**{z_nums(str(i))} ⇐** `.{cmd}`\n"
         msg += "— — — — — — — — — — — — —\n"
         msg += f"**👤 المطور الأول ⇐ [تواصل هنا](https://t.me/{owner1})**\n"
-        msg += f"**👤 المطور الثاني ⇐ [تواصل هنا](https://t.me/{owner2})**\n"
-        msg += "— — — — — — — — — — — — —\n"
-        msg += f"**📊 الإجمالي: {z_nums(str(len(all_list)))} حزمة برمجية شغّالة**"
+        msg += f"**📊 الإجمالي: {z_nums(str(len(all_list)))} حزمة**"
         await event.edit(msg, link_preview=False)
 
-# --- [4] نظام الحماية التلقائي ---
+# --- [4] نظام الحماية والرد الذكي ---
 @client.on(events.NewMessage(incoming=True))
 async def security_logic(event):
     data = load_data()
     if event.chat_id == LOG_GROUP_ID or not event.is_private: return
     user_id = event.sender_id
-    if user_id in SUDO_USERS or user_id in data.get("allowed", []): return
+    if user_id in SUDO_USERS: return
 
     if data.get("storage"):
         try: await client.send_message(LOG_GROUP_ID, f"**📥 رسالة من:** `{user_id}`\n**💬 النص:** {event.text}")
@@ -114,11 +129,14 @@ async def security_logic(event):
     save_data(data)
 
     if count == 1:
-        await event.reply("**⚠️ تحذير (1/5): يمنع السبام في معقل المتمرد.**")
+        await event.reply("**⚠️ تحذير: يمنع التكرار في معقل المتمرد.**", file=REBEL_IMG)
+    elif count < 5:
+        franco_res = await get_franco_reply(event.text)
+        await event.reply(f"**{franco_res}**", file=REBEL_IMG)
     elif count >= 5:
         await client(functions.contacts.BlockRequest(id=user_id))
 
-# --- [5] الإقلاع وتزامن الوقت ---
+# --- [5] الإقلاع وتحميل الإضافات ---
 async def start_rebel():
     print(REBEL_LOGO)
     await client.start()
@@ -136,10 +154,15 @@ async def start_rebel():
     
     asyncio.create_task(profile_engine())
 
+    # تحميل الإضافات (مثل ملف السحب) مع تمرير الكلاينت
     if os.path.exists("plugins"):
         for name in glob.glob("plugins/*.py"):
-            plugin_name = name.replace("/", ".").replace("\\", ".").replace(".py", "")
-            try: importlib.import_module(plugin_name)
+            path = name.replace("/", ".").replace("\\", ".").replace(".py", "")
+            try:
+                spec = importlib.util.spec_from_file_location(path, name)
+                mod = importlib.util.module_from_spec(spec)
+                mod.client = client 
+                spec.loader.exec_module(mod)
             except: pass
             
     await client.run_until_disconnected()
