@@ -4,29 +4,27 @@ from telethon import TelegramClient, events, functions, types
 from telethon.sessions import StringSession
 import config 
 
-# --- [1] محرك ريندر (فتح المنفذ 10000) لضمان العمل 24 ساعة ---
+# --- [1] محرك ريندر (عشان يظل السورس Live 24 ساعة) ---
 app = Flask(__name__)
 @app.route('/')
-def health_check(): return "🛡️ Rebel Source is Active"
+def health_check(): return "🛡️ Rebel Source is Live"
 
 def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=10000)
 
 threading.Thread(target=run_flask, daemon=True).start()
 
-# --- [2] إعدادات الهوية (المتمرد²⁰⁰³🦅 فقط) ---
-REBEL_TITLE = "المتمـــــــــرد²⁰⁰³🦅"
-REBEL_SIG_TEXT = "**نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمانٌ لا يُخترق.**"
+# --- [2] إعدادات الهوية والمطورين ---
+REBEL_TITLE = "المتمـــــــــرد²⁰⁰³"
+REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
 REBEL_DEV_LINKS = (
     "\n— — — — — — — — — — — —\n"
     "👤 المطور الأول ⇐ **[تواصل هنا](https://t.me/Vi_ti0)**\n"
     "👤 المطور الثاني ⇐ **[تواصل هنا](https://t.me/A0_O7)**\n"
     "— — — — — — — — — — — —"
 )
-REBEL_IMG = "https://telegra.ph/file/058204663f73359d997f0.jpg"
-DB_FILE = "rebel_security.json"
 SUDO_USERS = [6467728995] 
+DB_FILE = "rebel_security.json"
 
 client = TelegramClient(StringSession(config.SESSION), config.API_ID, config.API_HASH)
 
@@ -35,78 +33,79 @@ def load_data():
         try:
             with open(DB_FILE, "r") as f: return json.load(f)
         except: pass
-    return {"status": True, "counts": {}, "allowed": []}
+    return {"allowed": [], "counts": {}}
 
 def save_data(data):
     with open(DB_FILE, "w") as f: json.dump(data, f)
 
-# --- [3] نظام الرد التلقائي وحماية الخاص بالصورة ---
+# --- [3] نظام الرد التلقائي وحماية الخاص (الرد بالصورة) ---
 @client.on(events.NewMessage(incoming=True))
-async def private_security(event):
+async def private_handler(event):
     if not event.is_private: return
     data = load_data()
+    # استثناء المالك والمطورين من الحماية
     if event.sender_id in SUDO_USERS or event.sender_id in data.get("allowed", []): return
 
-    u_str = str(event.sender_id)
+    u_id = str(event.sender_id)
     counts = data.get("counts", {})
-    count = counts.get(u_str, 0) + 1
-    counts[u_str] = count; data["counts"] = counts; save_data(data)
+    count = counts.get(u_id, 0) + 1
+    counts[u_id] = count; data["counts"] = counts; save_data(data)
 
     if count == 1:
-        rebel_msg = (
-            f"**{REBEL_TITLE}**\n\n"
-            "- أهلاً بك في معقل المتمرد التقني 🛡️\n"
-            "⚠️ **تحذير (1/5):** يمنع السبام والتكرار.\n"
-            f"{REBEL_DEV_LINKS}"
-        )
-        await client.send_file(event.chat_id, REBEL_IMG, caption=rebel_msg)
+        welcome = f"**{REBEL_TITLE}**\n\n- أهلاً بك في معقل المتمرد التقني 🛡️\n⚠️ تحذير (1/5): يمنع السبام والتكرار.\n{REBEL_DEV_LINKS}"
+        await client.send_file(event.chat_id, REBEL_IMG, caption=welcome)
     elif count >= 5:
-        await event.reply("**🚫 تم حظرك نهائياً لتجاوز حد السبام.**")
+        await event.reply("**🚫 تم حظرك تلقائياً لتجاوز حد الرسائل.**")
         await client(functions.contacts.BlockRequest(id=event.sender_id))
 
-# --- [4] حماية القروبات (الدرع العظيم) ---
+# --- [4] حماية القروبات (الدرع ضد الهكر والتفليش) ---
 @client.on(events.ChatAction)
-async def group_guard(event):
+async def group_protection(event):
     data = load_data()
     if event.user_id in SUDO_USERS or event.user_id in data.get("allowed", []): return
     
+    # إذا حاول شخص طرد عضو أو تغيير معلومات القروب
     if event.user_kicked or event.new_title or event.new_photo:
         try:
             await client(functions.channels.EditBannedRequest(
                 event.chat_id, event.user_id, types.ChatBannedRights(until_date=None, view_messages=True)
             ))
-            await event.reply(f"**🛡️ {REBEL_TITLE}\n⚠️ تم رصد محاولة تخريب وحظر المخرب فوراً.**")
+            await event.reply(f"**🛡️ {REBEL_TITLE}**\n⚠️ تم كشف محاولة تخريب وحظر المخرب فوراً.")
         except: pass
 
-# --- [5] أوامر المالك (رفع مطور + ايدي بالصورة + الأوامر) ---
+# --- [5] أوامر المالك والمطورين (تم استرجاعها كاملة) ---
 @client.on(events.NewMessage(outgoing=True))
-async def rebel_commands(event):
-    text = event.text
+async def owner_commands(event):
+    text = event.raw_text
     data = load_data()
-    
-    if text == ".رفع مطور":
-        reply = await event.get_reply_message()
-        if reply:
-            if "allowed" not in data: data["allowed"] = []
-            if reply.sender_id not in data["allowed"]:
-                data["allowed"].append(reply.sender_id)
-                save_data(data); await event.edit(f"**✅ تم رفع `{reply.sender_id}` مطوراً في السورس.**")
-        else: await event.edit("**❌ ارسل الأمر بالرد على الشخص.**")
 
-    elif text == ".ايدي":
+    if text.startswith(".فحص"):
+        await event.edit(f"**{REBEL_TITLE}**\n**✅ السورس والدرع شغالين 100% يا متمرد.**")
+
+    elif text.startswith(".ايدي"):
         reply = await event.get_reply_message()
         target = reply.sender if reply else await event.get_sender()
-        info = f"**{REBEL_TITLE}**\n— — —\n**👤 الاسم:** {target.first_name}\n**🆔 الايدي:** `{target.id}`\n**🎖️ الرتبة:** المالك\n{REBEL_DEV_LINKS}"
         photo = await client.download_profile_photo(target.id)
-        await client.send_file(event.chat_id, photo or REBEL_IMG, caption=info); await event.delete()
+        info = f"**{REBEL_TITLE}**\n— — —\n👤 **الاسم:** {target.first_name}\n🆔 **الايدي:** `{target.id}`\n🎖️ **الرتبة:** المالك\n{REBEL_DEV_LINKS}"
+        await client.send_file(event.chat_id, photo or REBEL_IMG, caption=info)
+        await event.delete()
 
-    elif text == ".الاوامر" or text == ".اوامر الجروب":
-        msg = f"**{REBEL_TITLE}**\n— — —\n**١ ⇐** `.ايدي`\n**٢ ⇐** `.رفع مطور`\n**٣ ⇐** `.تنزيل مطور`\n— — —\n{REBEL_DEV_LINKS}"
-        await client.send_file(event.chat_id, REBEL_IMG, caption=msg); await event.delete()
+    elif text.startswith(".رفع مطور"):
+        reply = await event.get_reply_message()
+        if reply:
+            if reply.sender_id not in data["allowed"]:
+                data["allowed"].append(reply.sender_id)
+                save_data(data); await event.edit(f"**✅ تم رفع `{reply.sender_id}` مطوراً بنجاح.**")
+        else: await event.edit("**❌ ارفع بالرد على الشخص.**")
+
+    elif text.startswith(".الاوامر"):
+        cmds = f"**{REBEL_TITLE}**\n— — —\n`.فحص` | `.ايدي` | `.رفع مطور` | `.تنزيل مطور`\n— — —\n{REBEL_DEV_LINKS}"
+        await client.send_file(event.chat_id, REBEL_IMG, caption=cmds)
+        await event.delete()
 
 async def start_rebel():
     await client.start()
-    print("🛡️ REBEL SOURCE IS LIVE")
+    print("🛡️ REBEL SOURCE IS FULLY ACTIVE")
     await client.run_until_disconnected()
 
 if __name__ == '__main__':
