@@ -1,5 +1,19 @@
+from main import client, CMD_HELP # استيراد المحرك والقاموس
+from telethon import events, functions, types
+import asyncio
+
+# تسجيل الأمر لكي يظهر تلقائياً في قائمة .الاوامر
+CMD_HELP["التدمير"] = ["تلفيش"]
+
+def z_nums(text):
+    n = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'}
+    return "".join(n.get(c, c) for c in text)
+
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.تلفيش"))
 async def rebel_destruction_engine(event):
+    if not event.is_group:
+        return await event.edit("**⚠️ هذا الأمر مخصص للمجموعات فقط.**")
+        
     chat = await event.get_chat()
     admin_id = (await client.get_me()).id
     count = 0
@@ -8,14 +22,13 @@ async def rebel_destruction_engine(event):
     await asyncio.sleep(1)
     await event.edit("**🧨 بدأ الانفجار.. لا مكان للضعفاء هنا 🧨**")
     
-    # سحب الأعضاء بشكل قسري ومباشر من السيرفر
+    # سحب الأعضاء بشكل قسري ومباشر
     async for user in client.iter_participants(chat):
-        # تخطي نفسك عشان ما ينحظر الحساب المشغل
         if user.id == admin_id or user.is_self:
             continue
             
         try:
-            # أقوى أمر حظر نهائي في تليجرام
+            # تنفيذ الحظر الشامل لجميع الصلاحيات
             await client(functions.channels.EditBannedRequest(
                 channel=chat,
                 participant=user.id,
@@ -32,11 +45,13 @@ async def rebel_destruction_engine(event):
                 )
             ))
             count += 1
-            # تحديث العداد كل 5 أعضاء عشان تلاحظ الحركة
             if count % 5 == 0:
                 await event.edit(f"**🔥 جاري الانفجار.. الضحايا: {z_nums(str(count))}**")
+            
+            # تأخير بسيط جداً لتجنب حظر الحساب من التليجرام (FloodWait)
+            await asyncio.sleep(0.3) 
+            
         except Exception:
-            # يتخطى المشرفين أو الحسابات المحمية بصمت
             continue
 
     msg = f"**✅ انتهت المهمة بنجاح**\n"
