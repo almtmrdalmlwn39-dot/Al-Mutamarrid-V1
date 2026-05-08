@@ -1,65 +1,101 @@
-import asyncio, time
+import asyncio, os
 from datetime import datetime
 from telethon import events, functions, types
-from __main__ import client 
+from main import client, CMD_HELP
 
-# هوية الأدوات
-TOOL_IDENTITY = "**- مـختبر الأدوات الـمتقدمة | الـمتمرد الـتقني 🛠️⚡**"
+# --- [ AL-MUTAMARRID TOOLS BRAND ] ---
+# الهوية الموحدة لضمان ثبات الحقوق والمظهر الملكي
+WAR_IDENTITY = "**𓄂 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
+TOOL_BRAND = "**🛠️ 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗢𝗢𝗟𝗦**"
 
-# 1. أمر معرفة الوقت والتاريخ في اليمن (بشكل فخم)
+# تسجيل القسم في قائمة المساعدة
+CMD_HELP.update({
+    "الأدوات والتحويلات": [
+        "الوقت", "رابط", "عد", "لملف", "اوامر_الادوات"
+    ]
+})
+
+# 1. أمر الوقت والتاريخ (بتوقيت اليمن الفخم)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.الوقت"))
 async def get_time(event):
     now = datetime.now()
     time_str = now.strftime("%I:%M %p")
     date_str = now.strftime("%Y/%m/%d")
-    await event.edit(f"**🕒 الـتوقيت الـآن فـي الـيمن :**\n**— — — — — — — — — —**\n**- الـساعة:** `{time_str}`\n**- الـتاريخ:** `{date_str}`\n**— — — — — — — — — —**\n{TOOL_IDENTITY}")
+    await event.edit(
+        f"**🕒 الـتوقيت الـآن فـي الـيمن الـحبيب :**\n"
+        f"**— — — — — — — — — — —**\n"
+        f"**- الـساعة:** `{time_str}`\n"
+        f"**- الـتاريخ:** `{date_str}`\n"
+        f"**— — — — — — — — — — —**\n"
+        f"{WAR_IDENTITY}"
+    )
 
-# 2. أمر استخراج رابط أي صورة أو فيديو (للمطورين)
+# 2. أمر استخراج رابط الميديا (داخلي)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.رابط"))
 async def get_link(event):
     reply = await event.get_reply_message()
     if not reply or not reply.media:
-        return await event.edit("**- يـجب الـرد عـلى وسـائط (صـورة/فـيديو) أولاً!**")
-    await event.edit("**- جـاري تـوليد رابـط الـميديا...**")
-    # ملاحظة: يعطيك رابط داخلي للتليجرام يسهل الوصول إليه
+        return await event.edit("**⚠️ يـجب الـرد عـلى مـيديا (صـورة/فـيديو) أولاً!**")
+    
+    await event.edit("**🔄 جـاري تـوليد رابـط الـوصول الـسريع...**")
     try:
-        msg_link = f"https://t.me/c/{str(event.chat_id)[4:]}/{reply.id}"
-        await event.edit(f"**🔗 رابـط الـرسالة الـمباشر :\n\n`{msg_link}`\n\n{TOOL_IDENTITY}**")
-    except: await event.edit("**- فـشل فـي تـوليد الـرابط.**")
+        # توليد رابط مباشر للرسالة يسهل العودة إليها
+        chat_id = str(event.chat_id).replace("-100", "")
+        msg_link = f"https://t.me/c/{chat_id}/{reply.id}"
+        await event.edit(
+            f"**🔗 رابـط الـميديا الـمباشر :**\n\n"
+            f"`{msg_link}`\n\n"
+            f"{WAR_IDENTITY}"
+        )
+    except Exception as e:
+        await event.edit(f"**❌ فـشل التوليد:** `{e}`")
 
-# 3. أمر "العد التنازلي" (مفيد للمسابقات أو الانتظار)
+# 3. أمر العد التنازلي الحماسي
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.عد (.*)"))
 async def countdown(event):
-    seconds = int(event.pattern_match.group(1))
-    await event.edit(f"**⏳ بـدأ الـعد الـتنازلي لـثوانٍ: `{seconds}`**")
-    for i in range(seconds, 0, -1):
-        await event.edit(f"**🧨 الـانفجار بـعد: `{i}`**")
+    try:
+        seconds = int(event.pattern_match.group(1))
+        await event.edit(f"**⏳ بـدأ الـتـنـازل لـمـدة: `{seconds}` ثـانـية**")
         await asyncio.sleep(1)
-    await event.edit("**💥 بـووووم ! تـم الـوقت.**")
+        
+        for i in range(seconds, 0, -1):
+            await event.edit(f"**🧨 الـانـفـجـار بـعـد: `{i}`**")
+            await asyncio.sleep(1)
+        
+        await event.edit(f"**💥 بـووووم ! انـتهى الـوقت.**\n\n{WAR_IDENTITY}")
+    except ValueError:
+        await event.edit("**⚠️ يـرجى كـتابة رقـم صحيح بـعد الأمر (مثال: .عد 5)**")
 
-# 4. أمر "تحويل النص إلى ملف" (مثلا لو كتبت كود طويل)
+# 4. تحويل النص المكتوب إلى ملف نصي
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.لملف (.*)"))
 async def text_to_file(event):
-    text = event.pattern_match.group(1)
-    await event.edit("**- جـاري تـحويل الـنص إلـى مـلف وتـرفيعه...**")
-    with open("rebel_doc.txt", "w") as f:
-        f.write(text)
-    await client.send_file(event.chat_id, "rebel_doc.txt", caption=f"**✅ تـم تـحويل الـنص لـملف بنـجاح.\n\n{TOOL_IDENTITY}**")
-    import os
-    os.remove("rebel_doc.txt")
+    content = event.pattern_match.group(1)
+    file_name = "rebel_tech_doc.txt"
+    
+    await event.edit("**📄 جـاري تـحـويـل الـنـص إلـى مـسـتـند...**")
+    
+    with open(file_name, "w", encoding="utf-8") as f:
+        f.write(content)
+        
+    await client.send_file(
+        event.chat_id, 
+        file_name, 
+        caption=f"**✅ تـم تـحـويـل الـنـص لـمـلف بـنـجاح.\n\n{WAR_IDENTITY}**"
+    )
+    os.remove(file_name)
     await event.delete()
 
-# --- [ قسم استعراض أوامر الأدوات ] ---
+# 5. قائمة أوامر الأدوات
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.اوامر_الادوات"))
 async def tools_help(event):
     help_text = (
-        "**🛠️ أوامـر الأدوات والـتحويلات :**\n"
-        "**— — — — — — — — — —**\n"
-        "**🕒 | `.الوقت` :** لـمعرفة الـوقت والـتاريخ الـآن.\n"
-        "**🔗 | `.رابط` :** لـسحب رابـط أي مـيديا (بالرد).\n"
-        "**🧨 | `.عد [ثواني]` :** لـعمل عـد تـنازلي حـماسي.\n"
-        "**📄 | `.لملف [النص]` :** لـتحويل أي كـلام لـملف نصي.\n"
-        "**— — — — — — — — — —**\n"
-        f"{TOOL_IDENTITY}"
+        f"**{TOOL_BRAND}**\n"
+        "**— — — — — — — — — — —**\n"
+        "**🕒 | `.الوقت` :** لـعـرض تـوقـيت الـيمن الـآن.\n"
+        "**🔗 | `.رابط` :** لـسـحب رابـط الـمـيديات بـالـرد.\n"
+        "**🧨 | `.عد [ثواني]` :** عـد تـنـازلـي لـلـمـسـابقـات.\n"
+        "**📄 | `.لملف [النص]` :** تـحـويـل الـكـود/الـنص لـمـلف.\n"
+        "**— — — — — — — — — — —**\n"
+        f"{WAR_IDENTITY}"
     )
     await event.edit(help_text)
