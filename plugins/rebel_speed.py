@@ -1,52 +1,70 @@
 import asyncio
 from telethon import events
-from __main__ import client 
+from main import client, CMD_HELP
 
-# هوية السرعة
-SPEED_IDENTITY = "**- قـسم الـسرعة والـتنسيق | الـمتمرد الـتقني ⚡🦅**"
+# --- [ AL-MUTAMARRID SPEED BRAND ] ---
+# الهوية الموحدة التي تضمن فخامة المظهر
+WAR_IDENTITY = "**𓄂 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
+SPEED_BRAND = "**⚡ 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗣𝗘𝗘𝗗**"
 
-# 1. اختصار "السلام عليكم" بتنسيق فخم
+# تسجيل القسم في قائمة المساعدة الشاملة
+CMD_HELP.update({
+    "السرعة والتنسيق": [
+        "سلام", "انتظر", "نبض", "اكتب", "اوامر_السرعة"
+    ]
+})
+
+# 1. اختصار "السلام عليكم" بتنسيق المتمرد الفخم
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.سلام"))
 async def sleek_shalam(event):
-    await event.edit("**- الـسلام عـليكم ورحـمة الله وبـركاته 🌹✨**")
+    await event.edit(
+        "**— الـسلام عـليكم ورحـمة الله وبـركاته 🌹✨**\n"
+        f"{WAR_IDENTITY}"
+    )
 
-# 2. اختصار "تحميل" (وهمي لشغل الوقت)
+# 2. أمر شريط التحميل الوهمي (تنسيق مطور)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.انتظر"))
 async def wait_process(event):
-    for i in range(0, 101, 20):
-        await event.edit(f"**⏳ جـاري الـتحميل: `% {i}`**")
-        await asyncio.sleep(0.5)
-    await event.edit("**✅ تـمت الـعملية بـنجاح!**")
+    bar = ["⬜", "⬛", "⬛", "⬛", "⬛"]
+    for i in range(5):
+        bar[i] = "🟩"
+        progress = "".join(bar)
+        await event.edit(f"**⏳ جـاري الـتـنـفـيـذ...**\n`{progress}`")
+        await asyncio.sleep(0.4)
+    await event.edit(f"**✅ تـم اخـتراق الـوقت بـنجاح!**\n\n{WAR_IDENTITY}")
 
-# 3. أمر "القلب النابض" (تأثير بصري)
+# 3. أمر "القلب النابض" المطور
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.نبض"))
 async def heart_beat(event):
+    # نبضات متناغمة تعكس هيبة الاسم
     hearts = ["❤️", "🖤", "❤️", "🖤", "❤️"]
     for h in hearts:
-        await event.edit(f"**{h} الـمتمرد الـتقني {h}**")
-        await asyncio.sleep(0.5)
+        await event.edit(f"**{h} 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 {h}**")
+        await asyncio.sleep(0.6)
 
-# 4. أمر "كتابة سريعة" (يظهر كأنك تكتب حرف بحرف)
+# 4. أمر "الآلة الكاتبة" السريع
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.اكتب (.*)"))
 async def type_writer(event):
     text = event.pattern_match.group(1)
     t_text = ""
     for char in text:
         t_text += char
-        await event.edit(f"**{t_text}**")
+        # إضافة مؤشر الكتابة لإعطاء واقعية
+        await event.edit(f"**{t_text}▒**")
         await asyncio.sleep(0.1)
+    await event.edit(f"**{t_text}**")
 
-# --- [ قسم استعراض أوامر السرعة ] ---
+# 5. استعراض أوامر السرعة
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.اوامر_السرعة"))
 async def speed_help(event):
     help_text = (
-        "**⚡ أوامـر الـسرعة والـتنسيق :**\n"
-        "**— — — — — — — — — —**\n"
-        "**👋 | `.سلام` :** لإرسـال تـحية فـخمة.\n"
-        "**⏳ | `.انتظر` :** لـإظهار شـريط تـحميل وهـمي.\n"
-        "**💓 | `.نبض` :** تـأثير الـقلب الـنابض بـاسمك.\n"
-        "**⌨️ | `.اكتب [النص]` :** لـلكتابة بـتأثير الآلـة الـكاتبة.\n"
-        "**— — — — — — — — — —**\n"
-        f"{SPEED_IDENTITY}"
+        f"**{SPEED_BRAND}**\n"
+        "**— — — — — — — — — — —**\n"
+        "**👋 | `.سلام` :** لإلـقاء تـحية تـليق بـالـمتمردين.\n"
+        "**⏳ | `.انتظر` :** لـإظهار تـأثير مـعالجة بـرمجية.\n"
+        "**💓 | `.نبض` :** تـأثير بـصري يـنبض بـقوة اسـمك.\n"
+        "**⌨️ | `.اكتب [نص]` :** لـمحاكاة الآلـة الـكاتبة الـسريعة.\n"
+        "**— — — — — — — — — — —**\n"
+        f"{WAR_IDENTITY}"
     )
     await event.edit(help_text)
