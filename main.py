@@ -6,7 +6,7 @@ from telethon import TelegramClient, events, functions, types
 from telethon.sessions import StringSession
 
 # --- [ 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛 𝗚𝗟𝗢𝗕𝗔𝗟 𝗜𝗗𝗘𝗡𝗧𝗜𝗧𝗬 ] ---
-REBEL_NAME = "𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛"
+REBEL_NAME = "𝗔𝗟-𝗠𝗨𝗧𝗔ﻣ𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛"
 WAR_IDENTITY = f"**𓄂 {REBEL_NAME} 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
 
 # 1. التعريفات الأساسية
@@ -34,10 +34,10 @@ async def rebel_sub_menu(event):
     plugins = sorted(CMD_HELP.keys())
     if 0 <= plugin_index < len(plugins):
         plugin_name = plugins[plugin_index]
-        help_text = CMD_HELP[plugin_name]
+        help_text = "\n".join(CMD_HELP[plugin_name]) if isinstance(CMD_HELP[plugin_name], list) else CMD_HELP[plugin_name]
         await event.edit(f"ᯓ **أوامـر {plugin_name}** 𓆪\n\n{help_text}\n\n{WAR_IDENTITY}")
 
-# 4. محرك تحميل الإضافات (Plugins Loader)
+# 4. محرك تحميل الإضافات (Plugins Loader) المُعدل
 async def load_plugins():
     path = "plugins/*.py"
     files = glob.glob(path)
@@ -49,39 +49,32 @@ async def load_plugins():
             spec.loader.exec_module(mod)
             if hasattr(mod, 'CMD_HELP'):
                 CMD_HELP.update(mod.CMD_HELP)
+            print(f"✅ تم تحميل الإضافة بنجاح: {module_name}")
         except Exception as e:
-            print(f"❌ Error loading {module_name}: {e}")
+            print(f"❌ خطأ في تحميل {module_name}: {e}")
 
-# 5. دالة الإقلاع 🚀
+# 5. دالة الإقلاع
 async def start_rebel():
     print(f"🛡️ {REBEL_NAME} IS STARTING...") 
     await client.start()
     await load_plugins()
     me = await client.get_me()
-    print(f"✅ {REBEL_NAME} IS READY | Account: {me.first_name}") 
+    print(f"✅ {REBEL_NAME} READY | Account: {me.first_name}") 
     await client.run_until_disconnected()
 
-# 6. تشغيل سيرفر ويب وهمي لتجنب إيقاف Render
+# 6. سيرفر ويب (Flask)
 def run_flask():
     app = Flask(__name__)
     @app.route('/')
     def index(): return f"{REBEL_NAME} ONLINE 🛡️"
-    
-    # حل مشكلة Port 10000 المحجوز
-    # سيحاول استخدام المنفذ المخصص، وإذا فشل سيختار منفذاً عشوائياً
     try:
         port = int(os.environ.get("PORT", 10000))
         app.run(host='0.0.0.0', port=port)
-    except Exception as e:
-        print(f"⚠️ Flask Port Collision: {e}")
-        # محاولة أخيرة بمنفذ مختلف تماماً
+    except:
         app.run(host='0.0.0.0', port=random.randint(8000, 9000))
 
 if __name__ == '__main__':
-    # تشغيل Flask في خيط (Thread) منفصل لكي لا يعطل البوت الأساسي
     threading.Thread(target=run_flask, daemon=True).start()
-    
-    # تشغيل محرك البوت
     try:
         client.loop.run_until_complete(start_rebel())
     except Exception as e:
