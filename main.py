@@ -1,9 +1,12 @@
-import asyncio, os, pytz, glob, re, json, threading, random, importlib.util
+import asyncio, os, pytz, glob, re, json, threading, random, importlib.util, sys
 from config import SUDO_USERS, API_ID, API_HASH, SESSION
 from datetime import datetime
 from flask import Flask
 from telethon import TelegramClient, events, functions, types
 from telethon.sessions import StringSession
+
+# 🌟 السطر السحري الذي يمنع استنساخ البوت ويربط الإضافات بالمحرك الحقيقي 🌟
+sys.modules['main'] = sys.modules['__main__']
 
 # --- [ 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛 𝗚𝗟𝗢𝗕𝗔𝗟 𝗜𝗗𝗘𝗡𝗧𝗜𝗧𝗬 ] ---
 REBEL_NAME = "𝗔𝗟-𝗠𝗨𝗧𝗔ﻣ𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛"
@@ -37,7 +40,7 @@ async def rebel_sub_menu(event):
         help_text = "\n".join(CMD_HELP[plugin_name]) if isinstance(CMD_HELP[plugin_name], list) else CMD_HELP[plugin_name]
         await event.edit(f"ᯓ **أوامـر {plugin_name}** 𓆪\n\n{help_text}\n\n{WAR_IDENTITY}")
 
-# 4. محرك تحميل الإضافات (Plugins Loader) المُعدل
+# 4. محرك تحميل الإضافات (Plugins Loader)
 async def load_plugins():
     path = "plugins/*.py"
     files = glob.glob(path)
