@@ -2,7 +2,7 @@ import os
 
 # --- [ إعدادات سورس 𝗔𝗟-𝗠𝗨𝗧𝗔ﻣ𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛 ] ---
 
-# جلب البيانات من منصة Render (التي وضعتها أنت في الإعدادات)
+# جلب البيانات من منصة Render
 API_ID = int(os.environ.get("API_ID", 20585941)) 
 API_HASH = os.environ.get("API_HASH", "4c8b6debbee47ab644c82305487f34b2")
 SESSION = os.environ.get("SESSION", None)
