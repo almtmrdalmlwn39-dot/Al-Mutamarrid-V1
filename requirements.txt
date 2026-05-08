@@ -7,3 +7,5 @@ flask
 psutil
 Pillow
 google-generativeai
+aiohttp
+python-dotenv
