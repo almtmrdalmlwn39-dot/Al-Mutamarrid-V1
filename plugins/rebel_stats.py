@@ -1,18 +1,25 @@
 import asyncio
 from telethon import events, functions, types
-# استدعاء القلب النابض للسورس لضمان عدم التضارب
-import main 
+from main import client, CMD_HELP
 
-client = main.client
+# --- [ AL-MUTAMARRID STATS BRAND ] ---
+# استخدام الهوية الموحدة لضمان الفخامة البصرية
+WAR_IDENTITY = "**𓄂 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
+STATS_BRAND = "**📊 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗔𝗡𝗔𝗟𝗬𝗧𝗜𝗖𝗦**"
 
-# هوية الإحصائيات
-STATS_IDENTITY = "**- مـركز بـيانات الـمتمرد الـتقني | الـإحصائيات 📊🦅**"
+# تسجيل القسم في قائمة المساعدة
+CMD_HELP.update({
+    "البيانات والإحصائيات": [
+        "احصائياتي", "كشف_الجروب", "هويتي", "اوامر_الاحصائيات"
+    ]
+})
 
-# 1. أمر إحصائيات الحساب الشاملة (كم كروب، كم شخص، كم بوت)
+# 1. أمر إحصائيات الحساب الشاملة
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.احصائياتي"))
 async def account_stats(event):
-    await event.edit("**- جـاري تـحليل بـيانات الـحساب...**")
+    await event.edit("**🔄 جـاري تـحـلـيـل قـاعـدة بـيـانـات الـحـساب...**")
     try:
+        # طلب قائمة الحوارات وتحليلها
         result = await client(functions.messages.GetDialogsRequest(
             offset_date=None, offset_id=0, offset_peer=types.InputPeerEmpty(), limit=999, hash=0
         ))
@@ -26,52 +33,54 @@ async def account_stats(event):
                 else: groups += 1
                 
         res_text = (
-            f"**📊 تـقرير الـمتمرد لـلحساب :**\n"
-            f"**— — — — — — — — — —**\n"
-            f"**👤 الـخاص:** `{private}`\n"
-            f"**👥 الـمجموعات:** `{groups}`\n"
-            f"**📢 الـقنوات:** `{channels}`\n"
-            f"**🤖 الـبوتات:** `{bots}`\n"
-            f"**— — — — — — — — — —**\n"
-            f"{STATS_IDENTITY}"
+            f"**📊 تـقـريـر الـتـحـلـيـل الـمـلكـي :**\n"
+            f"**— — — — — — — — — — —**\n"
+            f"**👤 الـحـسابـات الـخاصـة :** `{private}`\n"
+            f"**👥 الـمـجـمـوعـات :** `{groups}`\n"
+            f"**📢 الـقـنـوات الـعـامـة :** `{channels}`\n"
+            f"**🤖 الـبـوتات الـنـشـطة :** `{bots}`\n"
+            f"**— — — — — — — — — — —**\n"
+            f"{WAR_IDENTITY}"
         )
         await event.edit(res_text)
     except Exception as e:
-        await event.edit(f"**❌ حدث خطأ أثناء التحليل: {e}**")
+        await event.edit(f"**⚠️ حـصل خـطأ أثـناء الـتحليل:** `{e}`")
 
-# 2. أمر "كشف الجروب" (معلومات المجموعة الحالية)
+# 2. أمر "كشف الجروب" (تحليل المجموعة)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.كشف_الجروب"))
 async def chat_info(event):
-    if event.is_private: return
-    await event.edit("**- جـاري تـشريح الـمجموعة بـياناتياً...**")
+    if event.is_private: 
+        return await event.edit("**⚠️ هـذا الأمـر يـعمل داخـل الـمجموعات فـقط!**")
+    
+    await event.edit("**🔍 جـاري تـشـريـح الـمـجـموعة تـقـنـيـاً...**")
     try:
         chat = await event.get_chat()
         full_chat = await client(functions.channels.GetFullChannelRequest(chat))
         
         info = (
-            f"**🏢 مـعلومات الـمجموعة :**\n"
-            f"**— — — — — — — — — —**\n"
-            f"**🆔 الآيـدي:** `{chat.id}`\n"
-            f"**👥 الـأعضاء:** `{full_chat.full_chat.participants_count}`\n"
-            f"**— — — — — — — — — —**\n"
-            f"{STATS_IDENTITY}"
+            f"**🏢 تـفـاصـيـل الـمـنـظـومـة :**\n"
+            f"**— — — — — — — — — — —**\n"
+            f"**🆔 آيـدي الـمجموعة :** `{chat.id}`\n"
+            f"**👥 عـدد الـمـتواجـديـن :** `{full_chat.full_chat.participants_count}`\n"
+            f"**— — — — — — — — — — —**\n"
+            f"{WAR_IDENTITY}"
         )
         await event.edit(info)
     except Exception:
-        await event.edit("**❌ لا أملك صلاحيات كافية للكشف عن هذه المجموعة.**")
+        await event.edit("**🚫 لا أمـلك الـصلاحيات الـكافـية لـتفكيك بـيانات الـمجموعة.**")
 
-# 3. أمر "هويتي" (معلوماتك الشخصية)
+# 3. أمر "هويتي" (البطاقة التعريفية)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.هويتي"))
 async def my_id(event):
     me = await client.get_me()
     my_info = (
-        f"**🪪 بـطاقة تـعريف الـمتمرد :**\n"
-        f"**— — — — — — — — — —**\n"
-        f"**- الـاسم:** {me.first_name}\n"
-        f"**- الآيـدي:** `{me.id}`\n"
-        f"**- الـيوزر:** @{me.username if me.username else 'لا يـوجد'}\n"
-        f"**— — — — — — — — — —**\n"
-        f"{STATS_IDENTITY}"
+        f"**🪪 بـطـاقـة تـعـريـف الـمـتـمـرد :**\n"
+        f"**— — — — — — — — — — —**\n"
+        f"**👤 الـاسـم :** `{me.first_name}`\n"
+        f"**🆔 الآيـدي :** `{me.id}`\n"
+        f"**🔗 الـيـوزر :** @{me.username if me.username else 'لا يـوجد'}\n"
+        f"**— — — — — — — — — — —**\n"
+        f"{WAR_IDENTITY}"
     )
     await event.edit(my_info)
 
@@ -79,12 +88,12 @@ async def my_id(event):
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.اوامر_الاحصائيات"))
 async def stats_help(event):
     help_text = (
-        "**📊 أوامـر الـبيانات والـإحصائيات :**\n"
-        "**— — — — — — — — — —**\n"
-        "**📈 | `.احصائياتي` :** تـفاصيل حـسابك كـاملاً.\n"
-        "**🔍 | `.كشف_الجروب` :** تـفاصيل الـمجموعة الـحالية.\n"
-        "**🪪 | `.هويتي` :** لـعرض مـعلوماتك الـشخصية.\n"
-        "**— — — — — — — — — —**\n"
-        f"{STATS_IDENTITY}"
+        f"**{STATS_BRAND}**\n"
+        "**— — — — — — — — — — —**\n"
+        "**📈 | `.احصائياتي` :** تـحليل شـامل لـحسابك.\n"
+        "**🔍 | `.كشف_الجروب` :** مـعـلومات الـمجموعة الـحالية.\n"
+        "**🪪 | `.هويتي` :** بـيـانـاتك الـشخصية الـمـسجلة.\n"
+        "**— — — — — — — — — — —**\n"
+        f"{WAR_IDENTITY}"
     )
     await event.edit(help_text)
