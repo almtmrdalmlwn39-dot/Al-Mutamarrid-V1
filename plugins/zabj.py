@@ -1,47 +1,46 @@
 import random
 from telethon import events
+import google.generativeai as genai
+from main import client, CMD_HELP
 
-# استدعاء الكلاينت مباشرة من الملف الرئيسي
-from main import client 
+# تسجيل القسم في قائمة المساعدة
+CMD_HELP.update({
+    "قسم الردود الذكية": ["زبج", "قصف"]
+})
 
-BOY_REPLIES = [
-    "يا خبير بطل هبالة وهرج كلام يدخل الراس.",
-    "يا صاحبي أنت محتاج إعادة ضبط مصنع لعقلك.",
-    "اسمعني، لو الذكاء بفلوس كنت أنت شحات.",
-    "يا منعاه خف علينا، العالم ما يتحملش إبداعك.",
-    "شكلك شربت شاي حارق اليوم، هدي اللعب."
-]
+# وظيفة توليد الرد عبر الذكاء الاصطناعي
+async def generate_smart_reply(user_text, reply_type):
+    try:
+        # صياغة الطلب للذكاء الاصطناعي ليكون الرد بشرياً وقاسياً
+        prompt = (
+            f"رد على هذه الرسالة: '{user_text}' بأسلوب {reply_type} ساخر جداً وقوي. "
+            f"اجعل الرد يبدو كأن شخصاً حقيقياً يكتبه، لا تذكر أي أسماء، "
+            f"استخدم لهجة بيضاء أو يمنية خفيفة، واجعل الرد قصيراً ومفحماً."
+        )
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content(prompt)
+        return response.text
+    except:
+        # رد احتياطي في حال فشل الاتصال بالذكاء الاصطناعي
+        return "كلامك هذا يحتاج إعادة ضبط مصنع، ركز قبل ما تتكلم."
 
-GIRL_REPLIES = [
-    "يا خبيرة وفري كلامك، الموضة هذه قديمة.",
-    "يا أختي لو الكلام عليه جمرك كنتِ مديونة.",
-    "شكلك ضيعتي الطريق، ارجعي لليوزرك أحسن.",
-    "بلاش حركات، العقل في راحة وأنتِ متعبة نفسك.",
-    "واصلِ، مخزون الضحك عندي محتاج نكتة جديدة."
-]
-
-def is_female(name):
-    if not name: return False
-    female_hints = ['ة', 'بنت', 'ام ']
-    return any(hint in name for hint in female_hints)
-
-# تعديل النمط ليكون مرناً ويستجيب فوراً
 @client.on(events.NewMessage(outgoing=True, pattern=r"^\.(زبج|قصف)$"))
-async def smart_reply(event):
-    if event.is_reply:
-        try:
-            reply = await event.get_reply_message()
-            user = await reply.get_sender()
-            full_name = (user.first_name or "") if user else ""
-            
-            msg = random.choice(GIRL_REPLIES if is_female(full_name) else BOY_REPLIES)
-            await event.delete()
-            await reply.reply(f"**{msg}**")
-        except:
-            await event.edit(f"**{random.choice(BOY_REPLIES)}**")
-    else:
-        await event.edit(f"**{random.choice(BOY_REPLIES + GIRL_REPLIES)}**")
-
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.اوامر الزبج$"))
-async def show_help(event):
-    await event.edit("🦅 **أوامر الزبج:**\n- `.زبج` (بالرد)\n- `.قصف` (بالرد)\n- `.اوامر الزبج`")
+async def ai_reply_cmd(event):
+    if not event.is_reply:
+        return await event.edit("**⚠️ يجب الرد على رسالة الشخص ليتم تحليلها والرد عليها!**")
+    
+    await event.edit("**🔄 جـاري تـحـلـيـل الـكلام والـقـصف...**")
+    
+    try:
+        reply_msg = await event.get_reply_message()
+        user_text = reply_msg.text or "صورة أو ملصق"
+        reply_type = "قصف جبهات" if ".قصف" in event.text else "زبج وسخرية"
+        
+        # توليد الرد الذكي
+        final_reply = await generate_smart_reply(user_text, reply_type)
+        
+        await event.delete()
+        await reply_msg.reply(f"**{final_reply}**")
+        
+    except Exception as e:
+        await event.edit(f"**⚠️ عذراً، حدث خطأ في معالجة الرد الذكي.**")
