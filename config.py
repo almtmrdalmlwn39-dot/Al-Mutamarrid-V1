@@ -2,18 +2,21 @@ import os
 
 # --- [ إعدادات سورس 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛 ] ---
 
-# سحب البيانات إجبارياً من منصة الاستضافة (Render/Heroku)
-# الآن لا توجد أي أرقام أو بيانات حقيقية هنا، الخصوصية 100%
+# سحب البيانات من منصة الاستضافة أو استخدام القيم الافتراضية
+# تم وضع الأيدي الخاص بك 6467728995 كمطور أساسي
 API_ID = int(os.environ.get("API_ID", 0)) 
 API_HASH = os.environ.get("API_HASH", None)
 SESSION = os.environ.get("SESSION", None)
 
-# سحب ايديك وايدي المطورين من المنصة فقط
-SUDO_STR = os.environ.get("SUDO_USERS", "")
-SUDO_USERS = list(map(int, SUDO_STR.split())) if SUDO_STR else []
+# إضافة الأيدي الخاص بك مباشرة لضمان عمل الأوامر والرتبة
+SUDO_STR = os.environ.get("SUDO_USERS", "6467728995")
+SUDO_USERS = list(map(int, SUDO_STR.split())) if SUDO_STR else [6467728995]
 
 # إعدادات الوقت
 YEMEN_TZ = "Asia/Aden"
 
-# اسم السورس الرسمي
+# اسم البوت الرسمي
 BOT_NAME = "𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛"
+
+# العبارة التي طلبت حصرها (يمكنك استدعاؤها في الترحيب فقط)
+SOURCE_TEXT = "نحن لا نحمي بياناتك فقط، نحن نمنحك القوة لتكون السيد في عالم لا يعترف إلا بالأقوياء. المتمرد.. أمان لا يُخترق، وهيبة لا تُهزم."
