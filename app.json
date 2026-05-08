@@ -1,11 +1,24 @@
 {
-  "name": "سورس المتمرد التقني",
-  "description": "أقوى سورس تليجرام عربي مطور بواسطة المتمرد.",
+  "name": "𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛",
+  "description": "أقوى سورس تليجرام عربي مطور بواسطة المتمرد التقني.",
   "logo": "https://telegra.ph/file/0c99a5e4d2a13f0a1c6a2.jpg",
-  "repository": "https://github.com/YourUsername/RebelKey",
+  "repository": "https://github.com/almtmrdalmlwn39-dot/Al-Mutamarrid-V1",
   "env": {
-    "API_ID": { "description": "احصل عليه من my.telegram.org", "value": "" },
-    "API_HASH": { "description": "احصل عليه من my.telegram.org", "value": "" },
-    "SESSION": { "description": "كود الجلسة الذي استخرجناه بـ session.py", "value": "" }
+    "API_ID": {
+      "description": "احصل عليه من موقع my.telegram.org",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "احصل عليه من موقع my.telegram.org",
+      "required": true
+    },
+    "SESSION": {
+      "description": "كود الجلسة (String Session) المستخرج من Termux",
+      "required": true
+    },
+    "SUDO_USERS": {
+      "description": "ايديك وايدي المطورين (يفصل بينهم بمسافة)",
+      "required": false
+    }
   }
 }
