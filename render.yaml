@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: al-mutamarrid-userbot
+    name: AL-MUTAMARRID-TECH-USERBOT
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
@@ -14,5 +14,8 @@ services:
       - key: SESSION
         sync: false
         placeholder: "أدخل كود الجلسة (String Session)"
+      - key: SUDO_USERS
+        sync: false
+        placeholder: "أدخل ايديك (ID) لكي يتعرف عليك السورس"
       - key: PYTHON_VERSION
         value: 3.10.0
