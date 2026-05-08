@@ -1,96 +1,61 @@
-import asyncio, random
+import asyncio, random, re, os
 from telethon import events, functions, types
-from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChatBannedRights
-from main import client, CMD_HELP
+from main import client, CMD_HELP, SUDO_USERS
 
 # --- [ AL-MUTAMARRID GROUP IDENTITY ] ---
-# البصمة الملكية الموحدة بالخط الإنجليزي العريض
 WAR_IDENTITY = "**𓄂 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
-GROUP_BRAND = "**⚖️ 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗖𝗢𝗡𝗧𝗥𝗢𝗟**"
 
-# تسجيل القسم في قائمة المساعدة
-CMD_HELP.update({
-    "الإدارة والترفيه": [
-        "حظر", "طرد", "حظي", "نسبة", "اوامر_الكروب"
-    ]
-})
-
-# 1. أمر الطرد الملكي (بالرد)
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.طرد"))
-async def kick_user(event):
-    if event.is_private: return
-    reply = await event.get_reply_message()
-    if not reply: 
-        return await event.edit("**⚠️ يـجب الـرد عـلى الـهدف لـطرده مـن الـساحة!**")
+# 1. قائمة الأوامر المقسمة (عرض فقط - كما في الصور)
+@client.on(events.NewMessage(incoming=True, pattern=r"^(م1|م2|م3|م4|م5|م8|الاوامر)$"))
+async def almutamarrid_menus(event):
+    cmd = event.pattern_match.group(1)
     
-    await event.edit("**🔄 جـاري تـنفيذ أمـر الـطرد...**")
+    if cmd == "م1": # أوامر الطرد والمسح (الصورة 1)
+        text = "**🗑️ أوامر المسح والطرد (م1):**\n• مسح + عدد | مسح بالرد\n• مسح (المحظورين/المكتومين)\n• طرد البوتات | طرد المحذوفين\n• حظر | كتم | تقييد | فك التقييد"
+    elif cmd == "م2": # أوامر الإعدادات والتحميل (الصورة 2)
+        text = "**⚙️ أوامر الإعدادات (م2):**\n• اضف رابط | انشاء رابط\n• ضع (الترحيب/القوانين)\n• تعيين الايدي\n• بحث (يوتيوب) | تيك + الرابط | ساوند + الرابط"
+    elif cmd == "م3": # أوامر التفعيل والتعطيل (الصورة 3)
+        text = "**🛡️ أوامر التفعيل/التعطيل (م3):**\n• تفعيل/تعطيل (الحماية/الايدي/الردود/الانذار)\n• قفل/فتح (الصور/الفيديو/الروابط)"
+    elif cmd == "م4": # أوامر العام (الصورة 4)
+        text = "**🌍 أوامر العام (م4):**\n• حظر عام | كتم عام\n• قائمة العام | مسح رتب العام\n• اضافة رد عام | تحديث"
+    elif cmd == "م5": # أوامر التسلية والزواج (الصورة 5)
+        text = "**🎭 أوامر التسلية (م5):**\n• رفع/تنزيل (هطف/كلب/بثر/خروف/بقلبي)\n• طلاق - زواج | زوجي - زوجتي | تتزوجني"
+    elif cmd == "م8": # أوامر التحويل والصيغ (الصورة 8)
+        text = "**🔄 أوامر التحويل والخدمية (م8):**\n• تحويل (صوت/متحركه/بصمه)\n• ايدت | ميمز | افتارات | هيدرات"
+    elif cmd == "الاوامر":
+        text = "**📚 قوائم أوامر المتمرد:**\n• م1 | م2 | م3 | م4 | م5 | م8"
+
+    await event.reply(text + f"\n\n{WAR_IDENTITY}")
+
+# 2. رادار الحماية (منع السب، الملغم، التفليش)
+@client.on(events.NewMessage(incoming=True))
+async def protection_radar(event):
+    if event.out or event.sender_id in SUDO_USERS: return
+    text = event.raw_text
+    # منع التفليش والسب والروابط
+    if len(text) > 3000 or re.search(r"(t\.me|http|@|\.com)", text) or any(w in text for w in ["سكس", "نيك", "قحبة"]):
+        try:
+            await event.delete()
+            await client(functions.channels.EditBannedRequest(event.chat_id, event.sender_id, ChatBannedRights(until_date=None, send_messages=True)))
+        except: pass
+
+# 3. أمر "ز" (الزواج العشوائي)
+@client.on(events.NewMessage(incoming=True, pattern=r"^ز$"))
+async def quick_marriage(event):
+    users = await client.get_participants(event.chat_id)
+    eligible = [u for u in users if not u.bot and u.id != event.sender_id]
+    if eligible:
+        chosen = random.choice(eligible)
+        await event.reply(f"**💍 زوجتك هي:** [{chosen.first_name}](tg://user?id={chosen.id})\n**ألف مبروك من سورس المتمرد!**")
+
+# 4. أمر الأيدي (ا)
+@client.on(events.NewMessage(incoming=True, pattern=r"^ا$"))
+async def quick_id(event):
+    target = (await event.get_reply_message()).sender if event.is_reply else event.sender
+    info = f"**🆔 أيدي:** `{target.id}`\n**👤 الاسم:** {target.first_name}\n\n{WAR_IDENTITY}"
     try:
-        await client.kick_participant(event.chat_id, reply.sender_id)
-        await event.edit(
-            f"**👞 تـم طـرد الـمخرب بنجاح.**\n"
-            f"**👤 الـمطرود: [{reply.sender.first_name}](tg://user?id={reply.sender_id})**\n\n"
-            f"{WAR_IDENTITY}"
-        )
-    except: 
-        await event.edit("**⚠️ عـذراً، لا أمـلك صـلاحـيات الإدارة كـامـلة هـنا!**")
-
-# 2. أمر الحظر النهائي (بالرد)
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.حظر"))
-async def ban_user(event):
-    if event.is_private: return
-    reply = await event.get_reply_message()
-    if not reply: 
-        return await event.edit("**⚠️ يـجب الـرد عـلى الـشخص لـنـفـيـه نـهائياً!**")
-    
-    await event.edit("**🚫 جـاري نـفي الـهدف إلـى خـارج الـمملكة...**")
-    try:
-        await client(EditBannedRequest(
-            event.chat_id, 
-            reply.sender_id, 
-            ChatBannedRights(until_date=None, view_messages=True)
-        ))
-        await event.edit(
-            f"**🚫 تـم حـظر الـمخرب نـهائياً مـن الـمجموعة.**\n"
-            f"**👤 الـمحظور: [{reply.sender.first_name}](tg://user?id={reply.sender_id})**\n\n"
-            f"{WAR_IDENTITY}"
-        )
-    except: 
-        await event.edit("**⚠️ نـقص فـي الـصلاحيات الـمطلوبة لـلحظر!**")
-
-# 3. أمر "لعبة الحظ" (ترفيه)
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.حظي"))
-async def luck_game(event):
-    results = ["مـمتاز ✨", "سـيء جـداً 💀", "مـتوسط ⚖️", "أسـطوري 🔥", "نـحس 🌚"]
-    await event.edit(
-        f"**🔮 نـتـيـجة حـظـك الـيوم مـع الـمتمرد هـي :**\n"
-        f"**↳ `{random.choice(results)}`**\n\n"
-        f"{WAR_IDENTITY}"
-    )
-
-# 4. أمر "نسبة الحب" (مزح)
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.نسبة"))
-async def love_percent(event):
-    reply = await event.get_reply_message()
-    name = reply.sender.first_name if reply else "الـمجهول"
-    percent = random.randint(0, 100)
-    await event.edit(
-        f"**❤️ نـسـبة مـحـبـتـك لـ {name} هـي :**\n"
-        f"**↳ `{percent}%`**\n\n"
-        f"{WAR_IDENTITY}"
-    )
-
-# 5. استعراض أوامر الكروب
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.اوامر_الكروب"))
-async def group_help(event):
-    help_text = (
-        f"**{GROUP_BRAND}**\n"
-        "**— — — — — — — — — —**\n"
-        "**🚫 | `.حظر` :** لـنـفي شـخص نـهائياً.\n"
-        "**👞 | `.طرد` :** لـتطهير الـساحة مـن الـمخربين.\n"
-        "**🔮 | `.حظي` :** لـقراءة الـحظ الـيومي.\n"
-        "**❤️ | `.نسبة` :** لـقياس الـنسبة مـع الآخـرين.\n"
-        "**— — — — — — — — — —**\n"
-        f"{WAR_IDENTITY}"
-    )
-    await event.edit(help_text)
+        photo = await client.download_profile_photo(target.id)
+        await client.send_file(event.chat_id, photo, caption=info)
+        os.remove(photo)
+    except: await event.reply(info)
