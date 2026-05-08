@@ -1,31 +1,47 @@
 import pytz
 from datetime import datetime
 from telethon import events
-from __main__ import client
+from main import client, CMD_HELP
 
-# 1. الرد التلقائي الذكي
-@client.on(events.NewMessage(incoming=True))
-async def auto_reply(event):
-    if event.is_private:
-        if 'يا متمرد' in event.raw_text or 'المتمرد' in event.raw_text:
-            await event.reply("**لبييييه! المتمرد التقني @Vi_ti0 معك، اؤمرني؟ 😎**")
+# --- [ AL-MUTAMARRID PRO IDENTITY ] ---
+# البصمة الملكية الموحدة بالخط الإنجليزي العريض
+WAR_IDENTITY = "**𓄂 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
 
-# 2. أمر الوقت المطور (بتوقيت اليمن)
+# تسجيل القسم في قائمة المساعدة
+CMD_HELP.update({
+    "الأدوات الاحترافية": [
+        "الوقت", "طرد"
+    ]
+})
+
+# ملاحظة: تم حذف الرد التلقائي من هنا لأنه موجود في ملف more.py بشكل أذكى
+
+# 1. أمر الوقت المطور (بتوقيت اليمن السعيد 🇾🇪)
 @client.on(events.NewMessage(pattern=r'\.الوقت', outgoing=True))
 async def get_time(event):
+    # ضبط التوقيت على آسيا/عدن لضمان الدقة في اليمن
     now = datetime.now(pytz.timezone('Asia/Aden'))
     time_str = now.strftime("%I:%M %p")
     date_str = now.strftime("%Y/%m/%d")
-    await event.edit(f"🛡️ **سورس المتمرد التقني**\n\n**⌚ الوقت:** `{time_str}`\n**📅 التاريخ:** `{date_str}`")
+    
+    time_msg = (
+        f"**⌚ الـوقـت الآن :** `{time_str}`\n"
+        f"**📅 الـتـاريـخ :** `{date_str}`\n"
+        f"**📍 الـموقـع :** `𝗬𝗘𝗠𝗘𝗡 🇾🇪`\n"
+        f"**— — — — — — — — — —**\n"
+        f"{WAR_IDENTITY}"
+    )
+    await event.edit(time_msg)
 
-# 3. أمر الطرد السريع (للمشرفين)
+# 2. أمر الطرد السريع للمشرفين
 @client.on(events.NewMessage(pattern=r'\.طرد', outgoing=True))
 async def kick_user(event):
-    if event.is_reply:
-        reply = await event.get_reply_message()
-        try:
-            await client.kick_participant(event.chat_id, reply.sender_id)
-            await event.edit("**✅ تم طرد العضو بنجاح!**")
-        except:
-            await event.edit("**⚠️ لا أملك صلاحيات الطرد!**")
-
+    if not event.is_reply:
+        return await event.edit("**⚠️ يـرجى الـرد عـلى الـشخص لـطرده!**")
+    
+    reply = await event.get_reply_message()
+    try:
+        await client.kick_participant(event.chat_id, reply.sender_id)
+        await event.edit(f"**✅ تـم طـرد الـمخرب مـن الـساحة بـنجاح!**\n\n{WAR_IDENTITY}")
+    except Exception as e:
+        await event.edit("**⚠️ لا أمـلك صـلاحـيات الـطرد فـي هـذه الـمجموعة!**")
