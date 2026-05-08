@@ -1,25 +1,19 @@
-from main import client, CMD_HELP, SUDO_USERS, DB_FILE # استيراد الإعدادات من الملف الرئيسي
+from main import client, CMD_HELP, SUDO_USERS, DB_FILE 
 from telethon import events, functions, types
 import json, os, re
 
-# تسجيل الحماية في القائمة الشاملة
-CMD_HELP["الحماية القصوى"] = ["تفعيل_الحماية", "منع_الروابط", "حماية_التفليش"]
+# --- [ AL-MUTAMARRID SECURITY IDENTITY ] ---
+# بصمة المتمرد الإنجليزية الفخمة (تثبت حقوقك عالمياً)
+WAR_IDENTITY = "**𓄂 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
 
-# قائمة الأنماط المشبوهة
-SPAM_PATTERNS = [
-    r"(تليجرام|بوت|اختراق|هكر|فلوس|مجانا|ثغرة)", 
-    r"(t\.me/|http|https|www\.)", 
-    r"(\.apk|\.exe|\.zip|\.py)" 
-]
+# تسجيل القسم بالعربي في القائمة
+CMD_HELP.update({
+    "الحماية القصوى": [
+        "تفعيل_الحماية", "منع_الروابط", "حماية_التفليش"
+    ]
+})
 
-def load_data():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r") as f: return json.load(f)
-        except: pass
-    return {"allowed": []}
-
-# --- [محرك الحماية العظمى] ---
+# محرك الحماية من الروابط والسبام
 @client.on(events.NewMessage(incoming=True))
 async def global_security_guard(event):
     if not event.is_group: return
@@ -28,34 +22,36 @@ async def global_security_guard(event):
     if event.sender_id in SUDO_USERS or event.sender_id in data.get("allowed", []):
         return
 
-    # فلترة النصوص والروابط
+    # فحص الروابط والكلمات الممنوعة
     for pattern in SPAM_PATTERNS:
         if re.search(pattern, event.text, re.IGNORECASE):
             try:
-                await event.delete()
+                await event.delete() # حذف الرسالة الممنوعة فوراً
                 return 
             except: pass
 
-    # منع الوسائط المشبوهة
-    if event.media:
-        if isinstance(event.media, (types.MessageMediaDocument, types.MessageMediaWebPage)):
-             try:
-                await event.delete()
-             except: pass
-
-# --- [حماية القروب من التفليش] ---
+# نظام منع "التفليش" والتخريب
 @client.on(events.ChatAction)
 async def anti_destruction(event):
     data = load_data()
+    me = await client.get_me()
+    owner_name = me.first_name # اسم منصب السورس
+
     if event.user_id in SUDO_USERS or event.user_id in data.get("allowed", []):
         return
 
-    # حظر المخربين فوراً عند محاولة التغيير
+    # إذا حاول شخص تخريب القروب (حذف أعضاء، تغيير اسم، إلخ)
     if event.user_kicked or event.new_title or event.new_photo or event.new_pin:
         try:
             await client(functions.channels.EditBannedRequest(
                 event.chat_id, event.user_id, 
                 types.ChatBannedRights(until_date=None, view_messages=True)
             ))
-            await event.reply(f"**🛡️ المتمرد بالمرصاد.. تم حظر المخرب `{event.user_id}` فوراً.**")
+            # الرسالة بالعربي عشان الكل يفهم أن الحماية شغالة
+            alert_msg = (
+                f"**🛡️ {owner_name} بالمرصاد..**\n"
+                f"**⚠️ تم حظر المخرب `{event.user_id}` فوراً لمنع التخريب.**\n\n"
+                f"{WAR_IDENTITY}"
+            )
+            await event.reply(alert_msg)
         except: pass
