@@ -1,6 +1,6 @@
 import random, asyncio, os, json
 from telethon import events
-# استيراد CMD_HELP لضمان ظهوره في القائمة رقم 11
+# استيراد CMD_HELP عشان نربطه بالقسم 11
 from main import client, WAR_IDENTITY, CMD_HELP 
 
 # --- [ تخزين بيانات الألعاب ] ---
@@ -23,75 +23,51 @@ G_DB = load_games()
 async def promotions(event):
     text = event.raw_text
     chat_id = str(event.chat_id)
-    
     titles = {
-        "رفع زوجتي": "💍 زوجته المصونة",
-        "رفع تاج": "👑 تاجه وراسه",
-        "رفع قلبي": "❤️ قطعة من قلبه",
-        "رفع كلب": "🐕 الكلب الوفي حق القروب",
-        "رفع بصلة": "🧅 بصلة القروب المعفنة",
-        "رفع قمر": "🌕 قمر القروب"
+        "رفع زوجتي": "💍 زوجته المصونة", "رفع تاج": "👑 تاجه وراسه",
+        "رفع قلبي": "❤️ قطعة من قلبه", "رفع كلب": "🐕 الكلب الوفي",
+        "رفع بصلة": "🧅 بصلة القروب", "رفع قمر": "🌕 قمر القروب"
     }
-
     if event.is_reply and text in titles:
         reply = await event.get_reply_message()
-        user_id = str(reply.sender_id)
-        user_name = reply.sender.first_name
-        
+        user_id, user_name = str(reply.sender_id), reply.sender.first_name
         if chat_id not in G_DB: G_DB[chat_id] = {}
         G_DB[chat_id][user_id] = titles[text]
         save_games(G_DB)
-        
         await event.edit(f"**🛡️ تم رفـع الـعـضو:** [{user_name}](tg://user?id={user_id})\n**👑 الـلقب:** {titles[text]}")
 
 # 2. أمر "منو" لمعرفة اللقب
 @client.on(events.NewMessage(outgoing=True, pattern=r"^منو$"))
 async def who_is(event):
-    if not event.is_reply: return await event.edit("**⚠️ رد على الشخص عشان أبسر لقبه.**")
+    if not event.is_reply: return await event.edit("**⚠️ رد على الشخص.**")
     reply = await event.get_reply_message()
-    user_id = str(reply.sender_id)
-    chat_id = str(event.chat_id)
-    
-    title = G_DB.get(chat_id, {}).get(user_id, "عضو ماله أي لقب حالياً 🤷‍♂️")
-    await event.edit(f"**🛡️ لـقب الـعضو في سورس المتمرد:**\n\n**👤 الاسـم:** {reply.sender.first_name}\n**👑 الـلـقب:** {title}")
+    title = G_DB.get(str(event.chat_id), {}).get(str(reply.sender_id), "عضو بلا لقب")
+    await event.edit(f"**👤 الاسـم:** {reply.sender.first_name}\n**👑 الـلـقب:** {title}")
 
 # 3. لعبة الزواج العشوائي
 @client.on(events.NewMessage(outgoing=True, pattern=r"^زواج$"))
 async def random_marry(event):
     users = await client.get_participants(event.chat_id)
     real_users = [u for u in users if not u.bot and not u.deleted]
-    if len(real_users) < 2: return await event.edit("**⚠️ مابش أعضاء كفاية للزواج!**")
-    
+    if len(real_users) < 2: return await event.edit("**⚠️ مابش أعضاء كفاية.**")
     u1, u2 = random.sample(real_users, 2)
-    await event.edit(f"**💍 باركوا لأطلق عرسان في القروب:**\n\n**🤵 العريس:** [{u1.first_name}](tg://user?id={u1.id})\n**👰 العروسة:** [{u2.first_name}](tg://user?id={u2.id})\n\n**ألف مبروك، منك المال ومنها العيال! 😂**")
+    await event.edit(f"**🤵 العريس:** [{u1.first_name}](tg://user?id={u1.id})\n**👰 العروسة:** [{u2.first_name}](tg://user?id={u2.id})\n**ألف مبروك! 😂**")
 
-# 4. ألعاب النسب (بالرد)
-@client.on(events.NewMessage(outgoing=True, pattern=r"^\.(نسبة الحب|نسبة الغباء|نسبة الانوثة|نسبة الرجولة)$"))
-async def percents(event):
-    cmd = event.pattern_match.group(1)
-    percent = random.randint(0, 100)
-    if event.is_reply:
-        reply = await event.get_reply_message()
-        await event.edit(f"**🛡️ {cmd} لـ [{reply.sender.first_name}](tg://user?id={reply.sender_id}) هي: {percent}%**")
-    else:
-        await event.edit(f"**🛡️ {cmd} عندك هي: {percent}%**")
-
-# 5. لعبة كشف الكذب
+# 4. لعبة كشف الكذب
 @client.on(events.NewMessage(outgoing=True, pattern=r"^كشف$"))
 async def lie_detector(event):
-    if not event.is_reply: return await event.edit("**⚠️ رد على الشخص اللي تبي تكشفه!**")
-    res = random.choice(["كذاب ومن الدرجة الأولى 🤥", "صادق والله، أهنيك ✅", "نص نص، فيه شوية بهارات 🌶️", "أشك في كلامه!"])
+    if not event.is_reply: return await event.edit("**⚠️ رد على الشخص.**")
+    res = random.choice(["كذاب ومن الدرجة الأولى 🤥", "صادق والله ✅", "نص نص 🌶️"])
     await event.edit(f"**🛡️ جهاز كشف الكذب يقول:**\n\n**[{res}]**")
 
-# --- [ دمج الألعاب مع قائمة .م11 التقنية والألعاب ] ---
+# --- [ الدمج مع قائمة .م11 التقنية والألعاب ] ---
 CMD_HELP.update({
     "التقنية والألعاب": [
-        "**• الأمر:** `زواج` ⇐ يزوج اثنين عشوائي بالقروب.",
-        "**• الأمر:** `رفع تاج / قلبي / زوجتي` ⇐ لرفع العضو بلقب.",
-        "**• الأمر:** `منو` ⇐ لمعرفة لقب العضو (بالرد).",
-        "**• الأمر:** `.نسبة الحب / الغباء` ⇐ لقياس النسبة.",
-        "**• الأمر:** `كشف` ⇐ جهاز كشف الكذب (بالرد).",
-        "**----------------------------------**",
-        "**• أوامر التقنية:** (تسريع، تشكيلة، تقييم)"
+        "**• أوامر التسلية (جديد):**",
+        "**-** `زواج` ، `كشف` ، `منو`",
+        "**-** `رفع تاج` ، `رفع قلبي` ، `رفع زوجتي`",
+        "**--------------------------**",
+        "**• أوامر التقنية الأساسية:**",
+        "**(تسريع، تشكيلة، تقييم)**"
     ]
 })
