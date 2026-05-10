@@ -21,11 +21,13 @@ client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 # 2. قائمة الأقسام الرئيسية (.الاوامر)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.الاوامر"))
 async def rebel_super_menu(event):
-    msg = f"ᯓ **{REBEL_NAME} - قـائمة الأقـسام** 𓆪\n"
-    msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
+    # ترتيب الأقسام أبجدياً لضمان الدقة
     plugins = sorted(CMD_HELP.keys())
     if not plugins:
         return await event.edit("**⚠️ مابش أي أقسام محملة حالياً.**")
+        
+    msg = f"ᯓ **{REBEL_NAME} - قـائمة الأقـسام** 𓆪\n"
+    msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
     for i, plugin in enumerate(plugins, 1):
         msg += f" **.م{i}** ➪ **أوامـر {plugin}**\n"
     msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
@@ -46,8 +48,10 @@ async def rebel_sub_menu(event):
             await event.edit(msg, link_preview=False)
     except: pass
 
-# 4. محرك التحميل الذكي (لسحب CMD_HELP من ملفات plugins)
+# 4. محرك التحميل الذكي (المعدل للتنظيف)
 async def load_plugins():
+    # أهم خطوة: مسح المساعدة القديمة لضمان عدم ظهور "تسريع وتشكيلة"
+    CMD_HELP.clear() 
     path = "plugins/*.py"
     files = glob.glob(path)
     for name in files:
