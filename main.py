@@ -10,25 +10,34 @@ sys.modules['main'] = sys.modules['__main__']
 
 # --- [ 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛 𝗚𝗟𝗢𝗕𝗔𝗟 𝗜𝗗𝗘𝗡𝗧𝗜𝗧𝗬 ] ---
 REBEL_NAME = "𝗔𝗟-𝗠𝗨𝗧𝗔ﻣ𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛"
-WAR_IDENTITY = f"**𓄂 {REBEL_NAME} 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
+WAR_IDENTITY = f"**🛡️ {REBEL_NAME} 𝗦𝗢𝗨𝗥𝗖𝗘 🦅**"
+
+# روابط الحقوق (تم التصحيح والربط المباشر)
+CH_LINK = "https://t.me/bedmoddinnow"
+DEV1 = "https://t.me/Vi_ti0"
+DEV2 = "https://t.me/A0_O7" # تم حذف الشرطة الزائدة ليعمل الرابط فوراً
 
 # 1. التعريفات الأساسية
 CMD_HELP = {}
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 
-# 2. قائمة الأوامر الرئيسية
+# 2. قائمة الأوامر الرئيسية (تم إضافة الحقوق والروابط هنا)
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.الاوامر"))
 async def rebel_super_menu(event):
-    msg = f"ᯓ **{REBEL_NAME} - قـائمة الأوامـر الـعـامـة** 𓆪\n"
+    msg = f"ᯓ **{REBEL_NAME} - قـائمة الأقـسام الـعـامة** 𓆪\n"
     msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
     plugins = sorted(CMD_HELP.keys())
     if not plugins:
         msg += "⚠️ يرجى التأكد من رفع ملفات الـ plugins بشكل صحيح."
     for i, plugin in enumerate(plugins, 1):
         msg += f" **.م{i}** ➪ **أوامـر {plugin}**\n"
-    msg += "\n⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
+    msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
+    msg += f"**📢 الـقـناة ⇐ [اضـغط هـنا]({CH_LINK})**\n"
+    msg += f"**👤 الـمطور 1 ⇐ [الـمتمرد]({DEV1})**\n"
+    msg += f"**👤 الـمطور 2 ⇐ [الـمتمرد]({DEV2})**\n"
+    msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
     msg += f"{WAR_IDENTITY}"
-    await event.edit(msg)
+    await event.edit(msg, link_preview=False)
 
 # 3. محرك تشغيل الأوامر الفرعية
 @client.on(events.NewMessage(outgoing=True, pattern=r"\.م(\d+)"))
@@ -38,7 +47,10 @@ async def rebel_sub_menu(event):
     if 0 <= plugin_index < len(plugins):
         plugin_name = plugins[plugin_index]
         help_text = "\n".join(CMD_HELP[plugin_name]) if isinstance(CMD_HELP[plugin_name], list) else CMD_HELP[plugin_name]
-        await event.edit(f"ᯓ **أوامـر {plugin_name}** 𓆪\n\n{help_text}\n\n{WAR_IDENTITY}")
+        msg = f"ᯓ **أوامـر {plugin_name}** 𓆪\n\n{help_text}\n\n"
+        msg += f"**👤 الـمطور ⇐ [اضـغط هـنا]({DEV1})**\n"
+        msg += f"{WAR_IDENTITY}"
+        await event.edit(msg, link_preview=False)
 
 # 4. محرك تحميل الإضافات (Plugins Loader)
 async def load_plugins():
@@ -65,7 +77,7 @@ async def start_rebel():
     print(f"✅ {REBEL_NAME} READY | Account: {me.first_name}") 
     await client.run_until_disconnected()
 
-# 6. سيرفر ويب (Flask)
+# 6. سيرفر ويب (Flask) للإبقاء على السورس حياً
 def run_flask():
     app = Flask(__name__)
     @app.route('/')
