@@ -23,6 +23,8 @@ async def rebel_super_menu(event):
     msg = f"ᯓ **{REBEL_NAME} - قـائمة الأقـسام** 𓆪\n"
     msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
     plugins = sorted(CMD_HELP.keys())
+    if not plugins:
+        return await event.edit("**⚠️ مابش أي أقسام محملة حالياً.**")
     for i, plugin in enumerate(plugins, 1):
         msg += f" **.م{i}** ➪ **أوامـر {plugin}**\n"
     msg += "⋆┄─┄─┄─┄┄─┄─┄─┄─┄┄⋆\n"
@@ -41,7 +43,7 @@ async def rebel_sub_menu(event):
         msg = f"ᯓ **أوامـر {p_name}** 𓆪\n\n{h_text}\n\n{WAR_IDENTITY}"
         await event.edit(msg, link_preview=False)
 
-# 3. محرك تحميل الإضافات (المحسن)
+# 3. محرك تحميل الإضافات (المحسن لسحب الأوامر)
 async def load_plugins():
     path = "plugins/*.py"
     files = glob.glob(path)
@@ -51,13 +53,18 @@ async def load_plugins():
             spec = importlib.util.spec_from_file_location(module_name, name)
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
+            # --- [ التعديل الجوهري هنا ] ---
+            # البحث عن متغير CMD_HELP داخل ملف الـ plugin وإضافته للقائمة الرئيسية
+            if hasattr(mod, 'CMD_HELP'):
+                CMD_HELP.update(mod.CMD_HELP)
+            # ------------------------------
             print(f"✅ Loaded: {module_name}")
         except Exception as e:
             print(f"❌ Error in {module_name}: {e}")
 
 async def start_rebel():
     await client.start()
-    await load_plugins() # تحميل الإضافات أولاً
+    await load_plugins() # تحميل الإضافات وتسجيل الأوامر
     print(f"🛡️ {REBEL_NAME} IS READY")
     await client.run_until_disconnected()
 
@@ -66,7 +73,10 @@ def run_flask():
     app = Flask(__name__)
     @app.route('/')
     def index(): return "ONLINE"
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+    try:
+        port = int(os.environ.get("PORT", 10000))
+        app.run(host='0.0.0.0', port=port)
+    except: pass
 
 if __name__ == '__main__':
     threading.Thread(target=run_flask, daemon=True).start()
