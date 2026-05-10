@@ -1,39 +1,79 @@
 import os, json
 from telethon import events
+# استيراد الأدوات من الملف الرئيسي
 from main import client, CMD_HELP
 
-# --- [ التخزين ] ---
-R_DB = "rebel_replies.json"
-def save(data): json.dump(data, open(R_DB, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
-def load(): return json.load(open(R_DB, "r", encoding="utf-8")) if os.path.exists(R_DB) else {}
-REPLIES = load()
-ADD_M = {}
+# --- [ إعدادات التخزين ] ---
+R_DB_FILE = "rebel_replies.json"
 
-# --- [ أوامر القسم 17: الردود الذكية ] ---
+def load_db():
+    if os.path.exists(R_DB_FILE):
+        try:
+            with open(R_DB_FILE, "r", encoding="utf-8") as f: return json.load(f)
+        except: return {}
+    return {}
+
+def save_db(data):
+    with open(R_DB_FILE, "w", encoding="utf-8") as f: 
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+REPLIES = load_db()
+ADD_MODE = {}
+
+# 1. أمر إضافة رد جديد
 @client.on(events.NewMessage(outgoing=True, pattern=r"^اضف رد$"))
-async def add(e):
-    ADD_M[e.sender_id] = {"s": 1}
-    await e.edit("**🛡️ أرسل الكلمة الآن:**")
+async def start_add(event):
+    ADD_MODE[event.sender_id] = {"step": 1}
+    await event.edit("**🛡️ أهلاً بك في معالج الردود..\nأرسل الآن (الكلمة) التي تريد الرد عليها:**")
 
+# 2. معالج خطوات الإضافة (تم فصله لتجنب التعليق)
 @client.on(events.NewMessage(outgoing=True))
-async def hndl(e):
-    uid = e.sender_id
-    if uid not in ADD_M or e.raw_text == "اضف رد": return
-    if ADD_M[uid]["s"] == 1:
-        ADD_M[uid].update({"w": e.raw_text, "s": 2})
-        await e.edit(f"**✅ حفظنا ({e.raw_text})، أرسل الرد:**")
-    elif ADD_M[uid]["s"] == 2:
-        REPLIES[ADD_M[uid]["w"]] = e.raw_text
-        save(REPLIES); del ADD_M[uid]
-        await e.edit("**🛡️ تم حفظ الرد بنجاح!**")
+async def handle_addition(event):
+    uid = event.sender_id
+    if uid not in ADD_MODE or event.raw_text == "اضف رد":
+        return
 
-@client.on(events.NewMessage(incoming=True))
-async def auto(e):
-    if e.raw_text in REPLIES: await e.reply(REPLIES[e.raw_text])
+    step = ADD_MODE[uid]["step"]
+    
+    if step == 1:
+        ADD_MODE[uid].update({"word": event.raw_text, "step": 2})
+        await event.edit(f"**✅ تم حفظ الكلمة: ({event.raw_text})\nأرسل الآن (الرد) المطلوب:**")
+    
+    elif step == 2:
+        word = ADD_MODE[uid]["word"]
+        REPLIES[word] = event.raw_text
+        save_db(REPLIES)
+        del ADD_MODE[uid]
+        await event.edit(f"**🛡️ تم تفعيل الرد بنجاح!\n• الكلمة: {word}\n• الرد: {event.raw_text}**")
 
-# --- [ التحديث الإجباري للقائمة 17 ] ---
+# 3. معالج الرد التلقائي (هذا هو اللي كان ناقصك)
+@client.on(events.NewMessage(incoming=False, outgoing=True)) # لردودك أنت
+async def auto_reply_self(event):
+    if event.sender_id in ADD_MODE: return # تجاهل لو كنت في وضع الإضافة
+    if event.raw_text in REPLIES:
+        await event.respond(REPLIES[event.raw_text])
+
+@client.on(events.NewMessage(incoming=True)) # لردود الأشخاص الآخرين
+async def auto_reply_others(event):
+    if event.raw_text in REPLIES:
+        await event.reply(REPLIES[event.raw_text])
+
+# 4. أمر مسح رد
+@client.on(events.NewMessage(outgoing=True, pattern=r"^مسح رد$"))
+async def delete_rep(event):
+    if not event.is_reply: return await event.edit("**⚠️ رد على الكلمة لمسحها.**")
+    reply = await event.get_reply_message()
+    word = reply.raw_text
+    if word in REPLIES:
+        del REPLIES[word]
+        save_db(REPLIES)
+        await event.edit(f"**🗑️ تم حذف الرد لـ ({word})**")
+    else:
+        await event.edit("**⚠️ هذه الكلمة ليس لها رد.**")
+
+# --- [ التحديث للقائمة 17 ] ---
 CMD_HELP["قسم الردود الذكية"] = [
-    "**-** `اضف رد` ⇐ لإضافة رد جديد.",
-    "**-** `مسح رد` ⇐ لحذف الرد بالرد عليه.",
-    "**-** الردود تُحفظ دائمياً."
+    "**-** `اضف رد` ⇐ إضافة رد جديد.",
+    "**-** `مسح رد` ⇐ حذف رد (بالرد عليه).",
+    "**-** الردود تعمل تلقائياً فور كتابة الكلمة."
 ]
