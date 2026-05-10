@@ -1,6 +1,7 @@
 import random, asyncio, os, json
 from telethon import events
-from main import client, WAR_IDENTITY
+# أضفنا CMD_HELP هنا عشان يظهر في القائمة
+from main import client, WAR_IDENTITY, CMD_HELP 
 
 # --- [ تخزين بيانات الألعاب ] ---
 GAMES_DB = "rebel_games_db.json"
@@ -23,7 +24,6 @@ async def promotions(event):
     text = event.raw_text
     chat_id = str(event.chat_id)
     
-    # أوامر الرفع المتاحة
     titles = {
         "رفع زوجتي": "💍 زوجته المصونة",
         "رفع تاج": "👑 تاجه وراسه",
@@ -59,7 +59,6 @@ async def who_is(event):
 @client.on(events.NewMessage(outgoing=True, pattern=r"^زواج$"))
 async def random_marry(event):
     users = await client.get_participants(event.chat_id)
-    # تصفية البوتات والحسابات المحذوفة
     real_users = [u for u in users if not u.bot and not u.deleted]
     if len(real_users) < 2: return await event.edit("**⚠️ مابش أعضاء كفاية للزواج!**")
     
@@ -83,3 +82,14 @@ async def lie_detector(event):
     if not event.is_reply: return await event.edit("**⚠️ رد على الشخص اللي تبي تكشفه!**")
     res = random.choice(["كذاب ومن الدرجة الأولى 🤥", "صادق والله، أهنيك ✅", "نص نص، فيه شوية بهارات 🌶️", "أشك في كلامه!"])
     await event.edit(f"**🛡️ جهاز كشف الكذب يقول:**\n\n**[{res}]**")
+
+# --- [ تعريف القسم للقائمة الرئيسية ] ---
+CMD_HELP.update({
+    "الألـعـاب": [
+        "**• الأمر:** `زواج` ⇐ يزوج اثنين عشوائي بالقروب.",
+        "**• الأمر:** `رفع تاج / قلبي / زوجتي` ⇐ لرفع العضو بلقب.",
+        "**• الأمر:** `منو` ⇐ لمعرفة لقب العضو (بالرد).",
+        "**• الأمر:** `.نسبة الحب / الغباء` ⇐ لقياس النسبة.",
+        "**• الأمر:** `كشف` ⇐ جهاز كشف الكذب (بالرد)."
+    ]
+})
