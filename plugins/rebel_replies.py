@@ -31,6 +31,7 @@ async def start_add_reply(event):
 async def process_add_reply(event):
     user_id = event.sender_id
     if user_id not in ADD_MODE: return
+    if event.raw_text == "اضف رد": return # عشان ما يتداخل مع الأمر الرئيسي
     
     step = ADD_MODE[user_id]["step"]
     text = event.raw_text
@@ -46,7 +47,16 @@ async def process_add_reply(event):
         del ADD_MODE[user_id]
         await event.edit(f"**🛡️ تم تفعيل الرد بنجاح!\n\n• الكلمة: {word}\n• الرد: {text}**")
 
-# 2. أمر مسح رد (بالرد على الكلمة)
+# 2. عرض قائمة الردود
+@client.on(events.NewMessage(outgoing=True, pattern=r"^الردود$"))
+async def list_replies(event):
+    if not R_DB: return await event.edit("**⚠️ مابش أي ردود محفوظة حالياً.**")
+    out = "**🛡️ قائمة الردود المحفوظة في سورس المتمرد:**\n\n"
+    for word in R_DB:
+        out += f"**• {word}** ➪ {R_DB[word]}\n"
+    await event.edit(out)
+
+# 3. أمر مسح رد (بالرد على الكلمة)
 @client.on(events.NewMessage(outgoing=True, pattern=r"^مسح رد$"))
 async def delete_reply(event):
     if not event.is_reply:
@@ -62,7 +72,7 @@ async def delete_reply(event):
     else:
         await event.edit(f"**⚠️ الكلمة ({word}) ليس لها رد محفوظ أصلاً.**")
 
-# 3. تشغيل الردود تلقائياً لجميع المستخدمين
+# 4. تشغيل الردود تلقائياً لجميع المستخدمين
 @client.on(events.NewMessage(incoming=True))
 async def listen_replies(event):
     if event.raw_text in R_DB:
@@ -71,9 +81,10 @@ async def listen_replies(event):
 # --- [ دمج الردود مع القسم رقم 17 ] ---
 CMD_HELP.update({
     "قسم الردود الذكية": [
-        "**• الأمر:** `اضف رد` ⇐ لبدء إضافة رد جديد للسورس.",
-        "**• الأمر:** `مسح رد` ⇐ لحذف رد (بالرد على الكلمة).",
-        "**• ميزة:** الردود تُحفظ في ملف JSON دائم ولا تضيع.",
-        "**• ميزة:** تعمل الردود تلقائياً عند كتابة الكلمة."
+        "**• الأمر:** `اضف رد` ⇐ لبدء إضافة رد جديد.",
+        "**• الأمر:** `الردود` ⇐ لعرض كل الردود المضافة.",
+        "**• الأمر:** `مسح رد` ⇐ لحذف رد (بالرد عليه).",
+        "**--------------------------**",
+        "**• ميزة:** الردود تُحفظ بشكل دائم في ملف JSON."
     ]
 })
