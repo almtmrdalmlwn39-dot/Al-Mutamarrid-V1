@@ -1,1 +1,11 @@
-teletho
+telethon
+python-magic
+requests
+pytz
+cryptg
+flask
+psutil
+Pillow
+google-generativeai
+aiohttp
+python-dotenv
