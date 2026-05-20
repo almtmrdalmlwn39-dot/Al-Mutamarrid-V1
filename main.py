@@ -14,13 +14,18 @@ app = Client(
     plugins=dict(root="plugins")
 )
 
-async def main():
-    await app.start()
-    print("-----------------------------------------")
-    print("🛡️  AL-MUTAMARRID SOURCE IS NOW LIVE!  🛡️")
-    print("-----------------------------------------")
-    await asyncio.Event().wait()
+async def start_rebel():
+    async with app:
+        print("-----------------------------------------")
+        print("🛡️  AL-MUTAMARRID SOURCE IS NOW LIVE!  🛡️")
+        print("-----------------------------------------")
+        await asyncio.Event().wait()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    try:
+        # إنشاء حلقة تشغيل جديدة لإصلاح خطأ Event Loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(start_rebel())
+    except KeyboardInterrupt:
+        pass
