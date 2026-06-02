@@ -6,10 +6,18 @@ from telethon.tl.functions.channels import GetParticipantsRequest
 from telethon.tl.types import ChannelParticipantsSearch, UserStatusOnline, UserStatusRecent
 from telethon.errors import FloodWaitError
 
+# قائمة الحروف والأرقام الذكية للالتفاف على رادار التليجرام (تفادي القيود 100%)
+SEARCH_QUERIES = [
+    'ا', 'ب', 'ت', 'ج', 'ح', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ص', 'ط', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+]
+
 # تفعيل الأمر عند كتابة (.سحب) أو (.scr) في التليجرام
+# تنبيه: إذا كان السورس الخاص بك يستخدم اسم كلينت آخر غير (bot) مثل (rebel) قم بتغييره هنا
 @bot.on(events.NewMessage(pattern=r"\.(سحب|scr)(.*)"))
 async def advanced_scraper(event):
-    # التحقق من أنك أنت المالك أو "SUDO"
+    # التحقق من أنك أنت المالك أو المطور (SUDO)
     if not event.out:
         return
 
@@ -20,7 +28,7 @@ async def advanced_scraper(event):
         await event.edit("**🚸 يرجى كتابة يوزر القروب بعد الأمر. مثال:\n`.سحب معرف_القروب`**")
         return
 
-    await event.edit("**🔍 جاري فحص القروب والاتصال بقاعدة البيانات...**")
+    await event.edit("**🔍 جاري فحص القروب المستهدف والاتصال بالسيرفر...**")
     
     # تنظيف الرابط إذا تم إدخاله كاملاً
     if '/' in input_text:
@@ -32,51 +40,68 @@ async def advanced_scraper(event):
         await event.edit(f"**❌ تعذر الوصول للقروب المستهدف.**\nالسبب: `{e}`")
         return
 
-    await event.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n⚡ يتم الآن تشغيل الفلتر الذكي المدفوع ضد الحظر...")
+    await event.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 تم تفعيل خوارزمية السحب المجهري بالحروف لمنع التقييد الحساب...")
 
     all_participants = []
-    offset = 0
-    limit = 100  # دفعة آمنة ومستقرة جداً
+    seen_users = set() # لمنع التكرار الناتجة عن البحث بالحروف
+    limit = 50  # دفعات صغيرة ومستقرة جداً لتفادي رادار الـ Flood
 
-    while True:
-        try:
-            participants = await event.client(GetParticipantsRequest(
-                channel=target_group,
-                filter=ChannelParticipantsSearch(''),
-                offset=offset,
-                limit=limit,
-                hash=0
-            ))
-        except FloodWaitError as e:
-            # حماية ذكية لتجنب تبنيد حسابك أثناء السحب
-            await event.respond(f"⚠️ تليجرام يفرض قيوداً مؤقتة! سيتوقف السحب تلقائياً لـ `{e.seconds}` ثانية للحفاظ على الحساب.")
-            await asyncio.sleep(e.seconds + 2)
-            continue
-        except Exception as e:
-            break
-
-        if not participants.users:
-            break
-
-        for user in participants.users:
-            if user.bot: # تخطي البوتات تلقائياً
+    # بدء السحب الذكي عبر التناوب على الحروف
+    for query in SEARCH_QUERIES:
+        offset = 0
+        while True:
+            try:
+                participants = await event.client(GetParticipantsRequest(
+                    channel=target_group,
+                    filter=ChannelParticipantsSearch(query),
+                    offset=offset,
+                    limit=limit,
+                    hash=0
+                ))
+            except FloodWaitError as e:
+                # حماية الحساب الفائقة في حال ضغط السيرفر
+                await event.respond(f"⚠️ تليجرام طلب تهدئة السرعة! سيتوقف السحب تلقائياً لـ `{e.seconds}` ثانية للحفاظ على الحساب.")
+                await asyncio.sleep(e.seconds + 2)
                 continue
+            except Exception as e:
+                break
+
+            if not participants.users:
+                break
+
+            for user in participants.users:
+                if user.bot: # تخطي البوتات تلقائياً
+                    continue
+                
+                # التحقق من عدم تكرار العضو ومن حالته (المتفاعلين فقط)
+                if user.id not in seen_users:
+                    if isinstance(user.status, (UserStatusOnline, UserStatusRecent)):
+                        all_participants.append(user)
+                        seen_users.add(user.id)
+
+            offset += len(participants.users)
             
-            # فلتر السورسات المدفوعة: سحب الأعضاء المتفاعلين (أونلاين أو تواجدوا مؤخراً) لضمان جودة اللستة
-            if isinstance(user.status, (UserStatusOnline, UserStatusRecent)):
-                all_participants.append(user)
+            # إذا كانت الدفعة أقل من الليميت يعني انتهت حسابات هذا الحرف
+            if len(participants.users) < limit:
+                break
+                
+            # فاصل زمني آمن جداً بين الدفعات للحرف الواحد
+            await asyncio.sleep(1.5)
 
-        offset += len(participants.users)
-        # فاصل زمني متغير (تلقائي) لمنع رادارات الحماية في تليجرام من كشف السحب السريع
-        await asyncio.sleep(1.2)
+        # فاصل زمني بسيط عند الانتقال من حرف إلى حرف آخر لراحة الحساب
+        await asyncio.sleep(0.5)
 
-    # حفظ اللستة في ملف CSV داخل مجلد السورس
+    if not all_participants:
+        await event.edit("**❌ لم يتم العثور على أعضاء متفاعلين يتطابقون مع الفلتر أو أن قائمة الأعضاء مخفية!**")
+        return
+
+    # حفظ اللستة النظيفة في ملف CSV داخل مجلد السورس
     file_name = f"members_{input_text}.csv"
     
     try:
         with open(file_name, "w", encoding='utf-8', newline='') as f:
             writer = csv.writer(f, delimiter=",", lineterminator="\n")
-            # كتابة العناوين وتخزين الـ Access Hash وهو السر لمنع أخطاء الإضافة لاحقاً
+            # كتابة العناوين وتخزين الـ Access Hash لضمان نجاح الإضافة بدون أخطاء Peer
             writer.writerow(['ID', 'Username', 'Access Hash', 'First Name', 'Last Name'])
             
             for user in all_participants:
@@ -89,7 +114,7 @@ async def advanced_scraper(event):
         await event.client.send_file(
             event.chat_id,
             file_name,
-            caption=f"✅ **اكتمل السحب بنجاح بمواصفات مدفوعة!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء المتفاعلين:** `{len(all_participants)}`\n⚙️ **الملف جاهز للإضافة الآن.**"
+            caption=f"✅ **اكتمل السحب الخارق بنجاح وبدون تقييد!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء الحقيقيين والمتفاعلين:** `{len(all_participants)}`\n⚙️ **اللستة مفلترة وجاهزة تماماً للإضافة.**"
         )
         
         # حذف الملف مؤقتاً من السيرفر بعد إرساله للحفاظ على المساحة
