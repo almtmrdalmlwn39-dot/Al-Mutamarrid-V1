@@ -13,13 +13,12 @@ SEARCH_QUERIES = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 ]
 
-# قائمة الأيديهات المسموح لها باستخدام السحب (أنت والمطورين)
+# قائمة الأيديهات المسموح لها باستخدام السحب (أنت والمطورين الذين رفعتهم)
 SUDO_USERS = [8735360084, 6895436017, 5445178068]
 
-# هاندلر عام ومفتوح يشتغل على أي سورس بدون مشاكل في التسمية
 @events.register(events.NewMessage(pattern=r"\.(سحب|scr)(.*)"))
 async def advanced_scraper(event):
-    # التحقق من الصلاحية: يسمح لك أو لأي مطور مضاف في القائمة أعلاه
+    # التحقق من الصلاحية: يسمح لك أو لأي مطور مضاف في القائمة
     if not event.out and event.sender_id not in SUDO_USERS:
         return
 
@@ -43,13 +42,16 @@ async def advanced_scraper(event):
     if '/' in input_text:
         input_text = input_text.split('/')[-1]
 
+    # السر هنا: استخدام الكلينت الخاص بالشخص الذي أرسل الرسالة لتفادي قيود الحساب الأصلي
+    active_client = event.client
+
     try:
-        target_group = await event.client.get_entity(input_text)
+        target_group = await active_client.get_entity(input_text)
     except Exception as e:
-        await progress_msg.edit(f"**❌ تعذر الوصول للقروب المستهدف.**\nالسبب: `{e}`")
+        await progress_msg.edit(f"**❌ تعذر الوصول للقروب المستهدف عبر هذا الحساب.**\nالسبب: `{e}`")
         return
 
-    await progress_msg.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 تم تفعيل خوارزمية السحب المجهري بالحروف لمنع تقييد الحساب...")
+    await progress_msg.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 يتم السحب الآن عبر حساب المطور مباشرة لتفادي قيود الحسابات الأخرى...")
 
     all_participants = []
     seen_users = set()
@@ -59,7 +61,8 @@ async def advanced_scraper(event):
         offset = 0
         while True:
             try:
-                participants = await event.client(GetParticipantsRequest(
+                # تنفيذ الطلب عبر الكلينت النشط (حساب الشخص المطور الحالي)
+                participants = await active_client(GetParticipantsRequest(
                     channel=target_group,
                     filter=ChannelParticipantsSearch(query),
                     offset=offset,
@@ -67,7 +70,7 @@ async def advanced_scraper(event):
                     hash=0
                 ))
             except FloodWaitError as e:
-                await event.respond(f"⚠️ تليجرام طلب تهدئة السرعة! سيتوقف السحب تلقائياً لـ `{e.seconds}` ثانية للحفاظ على الحساب.")
+                await event.respond(f"⚠️ الحساب الحالي واجه قيوداً مؤقتة! سيتوقف السحب لـ `{e.seconds}` ثانية.")
                 await asyncio.sleep(e.seconds + 2)
                 continue
             except Exception as e:
@@ -106,10 +109,11 @@ async def advanced_scraper(event):
                 last_name = user.last_name if user.last_name else ""
                 writer.writerow([user.id, username, user.access_hash, first_name, last_name])
                 
-        await event.client.send_file(
+        # إرسال الملف باستخدام الكلينت النشط
+        await active_client.send_file(
             event.chat_id,
             file_name,
-            caption=f"✅ **اكتمل السحب الخارق بنجاح وبدون تقييد!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء الحقيقيين والمتفاعلين:** `{len(all_participants)}`\n⚙️ **اللستة مفلترة وجاهزة تماماً للإضافة من قبل المطورين.**"
+            caption=f"✅ **اكتمل السحب الخارق بنجاح!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء:** `{len(all_participants)}`\n⚙️ **تم التنفيذ بنجاح عبر صلاحيات المطور الحالي.**"
         )
         
         await progress_msg.delete()
@@ -119,7 +123,7 @@ async def advanced_scraper(event):
     except Exception as e:
         await event.respond(f"❌ حدث خطأ أثناء توليد ملف البيانات: `{e}`")
 
-# ربط الدالة تلقائياً مع السيرفر عند التشغيل لضمان عدم حدوث NameError
+# ربط الدالة بالسيرفر تلقائياً
 if 'rebel' in globals():
     rebel.add_event_handler(advanced_scraper)
 elif 'bot' in globals():
