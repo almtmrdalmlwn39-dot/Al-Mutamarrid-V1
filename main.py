@@ -8,7 +8,7 @@ API_ID = int(os.environ.get("API_ID", 22610186))
 API_HASH = os.environ.get("API_HASH", "184e7fd176413cd0d2425494f1796229")
 SESSION = os.environ.get("SESSION_STRING")
 
-# تعريف العميل
+# تعريف العميل بشكل ثابت لتستدعيه الإضافات
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 
 async def load_plugins():
@@ -31,13 +31,13 @@ async def start_rebel():
     print("-----------------------------------------")
     
     await client.start()
+    # تحميل الإضافات بعد تفعيل واستقرار اتصال الكلينت لكي تتعرف على أيديهات الـ SUDO الخارجية
     await load_plugins()
     
     print("🚀 THE SOURCE IS LIVE ON YOUR ACCOUNT!")
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
-    # هذا السطر هو الحل لخطأ الـ Event Loop في النسخ الجديدة
     try:
         asyncio.run(start_rebel())
     except (KeyboardInterrupt, SystemExit):
