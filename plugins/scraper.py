@@ -13,12 +13,14 @@ SEARCH_QUERIES = [
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 ]
 
-# تفعيل الأمر عند كتابة (.سحب) أو (.scr) في التليجرام
-# تنبيه: إذا كان السورس الخاص بك يستخدم اسم كلينت آخر غير (bot) مثل (rebel) قم بتغييره هنا
-@bot.on(events.NewMessage(pattern=r"\.(سحب|scr)(.*)"))
+# قائمة الأيديهات المسموح لها باستخدام السحب (المطورين المساعدين الذين أرسلتهم)
+SUDO_USERS = [8735360084, 6895436017, 5445178068]
+
+# تم تعديلها إلى @rebel.on لتتوافق مع سورس ريبل الخاص بك بنسبة 100%
+@rebel.on(events.NewMessage(pattern=r"\.(سحب|scr)(.*)"))
 async def advanced_scraper(event):
-    # التحقق من أنك أنت المالك أو المطور (SUDO)
-    if not event.out:
+    # التحقق من الصلاحية: يسمح لك (صاحب الرقم) أو لأي مطور مضاف في القائمة أعلاه
+    if not event.out and event.sender_id not in SUDO_USERS:
         return
 
     # أخذ المعرف أو الرابط المكتوب بعد الأمر
@@ -40,7 +42,7 @@ async def advanced_scraper(event):
         await event.edit(f"**❌ تعذر الوصول للقروب المستهدف.**\nالسبب: `{e}`")
         return
 
-    await event.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 تم تفعيل خوارزمية السحب المجهري بالحروف لمنع التقييد الحساب...")
+    await event.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 تم تفعيل خوارزمية السحب المجهري بالحروف لمنع تقييد الحساب...")
 
     all_participants = []
     seen_users = set() # لمنع التكرار الناتجة عن البحث بالحروف
@@ -114,7 +116,7 @@ async def advanced_scraper(event):
         await event.client.send_file(
             event.chat_id,
             file_name,
-            caption=f"✅ **اكتمل السحب الخارق بنجاح وبدون تقييد!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء الحقيقيين والمتفاعلين:** `{len(all_participants)}`\n⚙️ **اللستة مفلترة وجاهزة تماماً للإضافة.**"
+            caption=f"✅ **اكتمل السحب الخارق بنجاح وبدون تقييد!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء الحقيقيين والمتفاعلين:** `{len(all_participants)}`\n⚙️ **اللستة مفلترة وجاهزة تماماً للإضافة من قبل المطورين.**"
         )
         
         # حذف الملف مؤقتاً من السيرفر بعد إرساله للحفاظ على المساحة
