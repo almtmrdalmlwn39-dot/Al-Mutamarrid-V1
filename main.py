@@ -1,5 +1,8 @@
 import os
 import asyncio
+import glob
+from pathlib import Path
+import importlib
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -12,15 +15,20 @@ SESSION = os.environ.get("SESSION_STRING")
 client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 
 async def load_plugins():
-    import glob
-    from pathlib import Path
-    import importlib
-    
+    # البحث عن جميع ملفات البلاجينز
     files = glob.glob("plugins/*.py")
     for name in files:
         module_name = Path(name).stem
+        if module_name == "__init__":
+            continue
         try:
-            importlib.import_module(f"plugins.{module_name}")
+            # تحميل الموديل برمجياً
+            mod = importlib.import_module(f"plugins.{module_name}")
+            
+            # حيلة برمجية ذكية: إجبار الملف المحمل على التعرف على الكلينت النشط للأوامر الخارجية
+            if hasattr(mod, "client"):
+                mod.client = client
+                
             print(f"✅ Loaded: {module_name}")
         except Exception as e:
             print(f"❌ Failed to load {module_name}: {e}")
@@ -30,15 +38,19 @@ async def start_rebel():
     print("🛡️  AL-MUTAMARRID SOURCE IS STARTING...  🛡️")
     print("-----------------------------------------")
     
+    # تشغيل العميل والاتصال بسيرفرات التليجرام أولاً
     await client.start()
-    # تحميل الإضافات بعد تفعيل واستقرار اتصال الكلينت لكي تتعرف على أيديهات الـ SUDO الخارجية
+    
+    # تحميل الإضافات وضخ الكلينت النشط داخلها
     await load_plugins()
     
     print("🚀 THE SOURCE IS LIVE ON YOUR ACCOUNT!")
+    # المحافظة على استمرار تشغيل السورس دون انقطاع
     await client.run_until_disconnected()
 
 if __name__ == "__main__":
     try:
+        # تشغيل السورس بالنظام المتوافق مع سيرفرات رندر
         asyncio.run(start_rebel())
     except (KeyboardInterrupt, SystemExit):
         pass
