@@ -7,46 +7,48 @@ from telethon.tl.functions.messages import ImportChatInviteRequest
 from telethon.tl.types import ChannelParticipantsSearch, UserStatusOnline, UserStatusRecent
 from telethon.errors import FloodWaitError, UserAlreadyParticipantError
 
-# لضمان ربط الدالة بالكلينت الرئيسي المسمى client في main.py
+# استدعاء الكلينت الرئيسي مباشرة من الماين
 from main import client
 
-# قائمة الحروف والأرقام الذكية للالتفاف على رادار التليجرام
+# قائمة الأيديهات المسموح لها باستخدام السحب (المطورين وأنت)
+SUDO_USERS = [8735360084, 6895436017, 5445178068]
+
+# الحروف الذكية للالتفاف على رادار التليجرام منعاً للتقييد
 SEARCH_QUERIES = [
     'ا', 'ب', 'ت', 'ج', 'ح', 'خ', 'د', 'ر', 'ز', 'س', 'ش', 'ص', 'ط', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي',
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
 ]
 
-# قائمة الأيديهات المسموح لها باستخدام السحب (المطورين الذين رفعتهم)
-SUDO_USERS = [8735360084, 6895436017, 5445178068]
-
-# الهاندلر مضبوط على الكلينت الصحيح ومفتوح لاستقبال رسائل المطورين (incoming=True)
-@client.on(events.NewMessage(incoming=True, pattern=r"\.(سحب|scr)(.*)"))
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.(سحب|scr)(.*)"))
+# دالة السحب الرئيسية
 async def advanced_scraper(event):
-    # التحقق من الصلاحية: إذا لم تكن أنت المالك ولم يكن المرسل من المطورين يتجاهل الأمر
-    if not event.out and event.sender_id not in SUDO_USERS:
+    # السماح لمالك الحساب أو أي شخص مضاف في قائمة الـ SUDO
+    is_sudo = event.sender_id in SUDO_USERS
+    is_me = event.out
+    
+    if not is_me and not is_sudo:
         return
 
-    input_text = event.pattern_match.group(2).strip()
+    # استخراج النص المكتوب بعد الأمر
+    try:
+        input_text = event.pattern_match.group(2).strip()
+    except Exception:
+        return
     
     if not input_text:
         await event.reply("**🚸 يرجى كتابة يوزر أو رابط القروب بعد الأمر. مثال:\n`.سحب معرف_القروب`**")
         return
 
-    # محاولة حذف أمر المطور لتنظيف الشات
+    # حذف أمر المطور فوراً لتنظيف الشات
     try:
         await event.delete()
     except:
         pass
 
-    progress_msg = await event.respond("**🔍 جاري فحص الرابط والاتصال بسيرفرات تليجرام...**")
-    
-    # استخدام كلينت السورس النشط
-    active_client = event.client
+    # إرسال رسالة بدء الفحص
+    progress_msg = await event.respond("**🔍 [نظام المطورين] جاري فحص الرابط والاتصال بالسيرفر...**")
     target_group = None
 
-    # معالجة الروابط الخاصة (المحمية) والعامة
     try:
         if 't.me/' in input_text or 'telegram.me/' in input_text:
             link_parts = input_text.split('/')[-1]
@@ -54,24 +56,24 @@ async def advanced_scraper(event):
                 link_parts = link_parts[1:]
                 
             try:
-                updates = await active_client(ImportChatInviteRequest(link_parts))
+                updates = await client(ImportChatInviteRequest(link_parts))
                 target_group = updates.chats[0]
             except UserAlreadyParticipantError:
-                target_group = await active_client.get_entity(input_text)
+                target_group = await client.get_entity(input_text)
             except Exception:
-                target_group = await active_client.get_entity(input_text)
+                target_group = await client.get_entity(input_text)
         else:
-            target_group = await active_client.get_entity(input_text)
+            target_group = await client.get_entity(input_text)
             
     except Exception as e:
-        await progress_msg.edit(f"**❌ تعذر الوصول للقروب المستهدف عبر السيرفر.**\nالسبب: `{e}`\n💡 تأكد أن الحساب منضم للقروب إذا كان خاصاً.")
+        await progress_msg.edit(f"**❌ تعذر الوصول للقروب المستهدف.**\nالسبب: `{e}`")
         return
 
     if not target_group:
         await progress_msg.edit("**❌ فشل تحديد الكيان البرمجي للقروب.**")
         return
 
-    await progress_msg.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 يتم الآن تشغيل خوارزمية السحب المجهري بالحروف...")
+    await progress_msg.edit(f"**📥 جاري سحب أعضاء: ( {target_group.title} )**\n🔥 يتم السحب الآن عبر الحساب المساعد بنجاح...")
 
     all_participants = []
     seen_users = set()
@@ -81,7 +83,7 @@ async def advanced_scraper(event):
         offset = 0
         while True:
             try:
-                participants = await active_client(GetParticipantsRequest(
+                participants = await client(GetParticipantsRequest(
                     channel=target_group,
                     filter=ChannelParticipantsSearch(query),
                     offset=offset,
@@ -89,10 +91,10 @@ async def advanced_scraper(event):
                     hash=0
                 ))
             except FloodWaitError as e:
-                await event.respond(f"⚠️ السيرفر واجه قيوداً مؤقتة! سيتوقف السحب تلقائياً لـ `{e.seconds}` ثانية.")
+                await event.respond(f"⚠️ السيرفر طلب التهدئة! سيتوقف السحب لـ `{e.seconds}` ثانية لحماية الحساب.")
                 await asyncio.sleep(e.seconds + 2)
                 continue
-            except Exception as e:
+            except Exception:
                 break
 
             if not participants.users:
@@ -109,11 +111,11 @@ async def advanced_scraper(event):
             offset += len(participants.users)
             if len(participants.users) < limit:
                 break
-            await asyncio.sleep(1.5)
-        await asyncio.sleep(0.5)
+            await asyncio.sleep(1.2)
+        await asyncio.sleep(0.3)
 
     if not all_participants:
-        await progress_msg.edit("**❌ لم يتم العثور على أعضاء متفاعلين يتطابقون مع الفلتر أو أن قائمة الأعضاء مخفية!**")
+        await progress_msg.edit("**❌ لم يتم العثور على أعضاء متفاعلين أو أن القائمة مخفية!**")
         return
 
     file_name = f"members_{target_group.id}.csv"
@@ -128,10 +130,10 @@ async def advanced_scraper(event):
                 last_name = user.last_name if user.last_name else ""
                 writer.writerow([user.id, username, user.access_hash, first_name, last_name])
                 
-        await active_client.send_file(
+        await client.send_file(
             event.chat_id,
             file_name,
-            caption=f"✅ **اكتمل السحب الخارق بنجاح!**\n\n👥 **اسم القروب:** {target_group.title}\n📊 **إجمالي الأعضاء الحقيقيين:** `{len(all_participants)}`\n⚙️ **تمت العملية بنجاح لصالح المطورين.**"
+            caption=f"✅ **اكتمل السحب بنجاح!**\n\n👥 **القروب:** {target_group.title}\n📊 **العدد:** `{len(all_participants)}`"
         )
         
         await progress_msg.delete()
@@ -140,3 +142,7 @@ async def advanced_scraper(event):
 
     except Exception as e:
         await event.respond(f"❌ حدث خطأ أثناء توليد ملف البيانات: `{e}`")
+
+# حاقن الأحداث الصارم: يجبر السورس على قراءة الرسائل الصادرة والواردة وفي كل مكان
+client.add_event_handler(advanced_scraper, events.NewMessage(incoming=True, pattern=r"\.(سحب|scr)(.*)"))
+client.add_event_handler(advanced_scraper, events.NewMessage(outgoing=True, pattern=r"\.(سحب|scr)(.*)"))
