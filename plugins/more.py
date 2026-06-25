@@ -66,32 +66,9 @@ async def watcher(event):
     if event.is_private and event.sender_id in muted_users:
         await event.delete()
 
-# --- [ 4. ميزة الرد الذكي والترحيب الملكي ] ---
-@client.on(events.NewMessage(incoming=True))
-async def auto_reply(event):
-    me = await client.get_me()
-    owner_name = me.first_name 
-    
-    sender = await event.get_sender()
-    sender_name = sender.first_name if sender.first_name else "يا طيب"
-    
-    msg = event.raw_text
-    
-    # الرد باسم صاحب الحساب
-    if owner_name in msg:
-        await event.reply(
-            f"**لبييييه يا {sender_name}! {owner_name} يسمعك عبر 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘.. تفضل! 😎**"
-        )
-    
-    # الرد بلقب المتمرد
-    elif 'يا متمرد' in msg:
-        await event.reply(
-            f"**لبييييه يا {sender_name}! المتمرد معك عبر 𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗦𝗢𝗨𝗥𝗖𝗘.. ✨**"
-        )
-        
     # الترحيب الفخم
     elif msg == 'السلام عليكم':
         await event.reply(
-            f"**وعليكم السلام ورحمة الله وبركاته.. حياك الله يا {sender_name} في رحاب {owner_name}! 𓄂**\n"
-            f"**نورت الساحة بمرورك الملكي.. ✨**"
+            f"**وعليكم السلام ورحمة الله وبركاته.. حياك الله يا {sender_name} {owner_name}! 𓄂**\n"
+            f"**نورت .. ✨**"
         )
