@@ -2,37 +2,29 @@ import asyncio
 from telethon import events, functions, types
 from main import client, CMD_HELP, SUDO_USERS
 
-# --- [ AL-MUTAMARRID TECH IDENTITY ] ---
-# اسم المتمرد بالإنجليزية الفخمة كما طلبت
 REBEL_NAME = "𝗔𝗟-𝗠𝗨𝗧𝗔𝗠𝗔𝗥𝗥𝗜𝗗 𝗧𝗘𝗖𝗛"
-WAR_IDENTITY = f"**𓄂 {REBEL_NAME} 𝗦𝗢𝗨𝗥𝗖𝗘 🛡️**"
+WAR_IDENTITY = f"**𓄂 {REBEL_NAME} 𝗦𝗢𝗨Ｒ𝗖𝗘 🛡️**"
 
-# متغيرات الحالة والتخزين
 PRIVATE_PROTECTION = True 
-private_log = {} 
+private_log = {}
 
-# تسجيل القسم في قائمة المساعدة
 CMD_HELP.update({
     "الخصوصية والترحيب": [
-        "تفعيل_الخاص", "تعطيل_الخاص", "قفل_الحساب", "تدمير", "انهاء"
+        "تفعيل الحماية", "تعطيل الحماية", "قفل الحساب", "تدمير", "انهاء"
     ]
 })
 
-# --- [ 1. أوامر التحكم بالدرع ] ---
-
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.تفعيل_الخاص"))
+@client.on(events.NewMessage(outgoing=True, pattern=r"\.تفعيل الحماية"))
 async def enable_p(event):
     global PRIVATE_PROTECTION
     PRIVATE_PROTECTION = True
-    await event.edit(f"**✅ تم تفعيل درع {REBEL_NAME} للخاص.**")
+    await event.edit(f"**✅ تم تفعيل درع حماية الخاص لـ {REBEL_NAME}.**")
 
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.تعطيل_الخاص"))
+@client.on(events.NewMessage(outgoing=True, pattern=r"\.تعطيل الحماية"))
 async def disable_p(event):
     global PRIVATE_PROTECTION
     PRIVATE_PROTECTION = False
-    await event.edit(f"**📴 تم تعطيل حماية {REBEL_NAME} بنجاح.**")
-
-# --- [ 2. الترحيب ونظام الـ 5 تحذيرات ] ---
+    await event.edit(f"**𓄴 تم تعطيل حماية الخاص بنجاح.**")
 
 @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
 async def private_guard_system(event):
@@ -44,17 +36,21 @@ async def private_guard_system(event):
     if user_id in SUDO_USERS or (sender and sender.bot):
         return
 
-    # أول رسالة: ترحيب عربي + الاسم بالإنجليزي + صورة بروفايلك
+    # 1. إرسال الترحيب الفخم عند أول رسالة
     if user_id not in private_log:
-        private_log[user_id] = 5 
+        private_log[user_id] = 4  # عدد التحذيرات المتاحة له بعد الترحيب
+        
+        me = await client.get_me()
+        my_name = me.first_name if me.first_name else "صاحب الحساب"
         photos = await client.get_profile_photos("me")
+        
         welcome_text = (
-            f"**🛡️ أهـلاً بـك فـي مـنـظومة {REBEL_NAME}**\n"
-            f"**— — — — — — — — — — —**\n"
-            f"**👤 أيـديـك:** `{user_id}`\n"
-            f"**⚠️ لـديـك (5) مـحاولات قـبل الـحـظر الـتلقـائي.**\n"
-            f"**— — — — — — — — — — —**\n"
-            f"**𓄂 الـخـاص مـراقب تـقـنيـاً لـمنع الإزعاج 🛡️**\n\n"
+            f"**مرحباً بك.. ✨**\n\n"
+            f"**أهلاً بك في خاص حـسـاب ({my_name})**\n"
+            f"**فضلاً، اترك رسالتك أو سبب تواصلك هنا بوضوح،**\n"
+            f"**وسيتم الرد عليك في أقرب وقت ممكن فور التواجد.**\n\n"
+            f"**🆔 آيديك:** `{user_id}`\n"
+            f"**— — — — — — — — — — — —**\n"
             f"{WAR_IDENTITY}"
         )
         try:
@@ -66,22 +62,30 @@ async def private_guard_system(event):
             await event.reply(welcome_text)
         return
 
-    # نظام تناقص التحذيرات بالعربي
+    # 2. إرسال تحذير في كل رسالة أخرى يقوم بإرسالها
     private_log[user_id] -= 1
     remains = private_log[user_id]
 
     if remains > 0:
-        await event.reply(f"**⚠️ تـنـبـيـه! تـبـقى لـك ({remains}) مـحـاولات فـقـط قـبـل الـحـظر.**")
+        await event.reply(f"**⚠️ تنبيه: يرجى الانتظار دون تكرار الرسائل. متبقي لك ({remains}) محاولات قبل الحظر التلقائي.**")
     else:
+        # 3. الحظر النهائي عند انتهاء المحاولات
         try:
             await client(functions.contacts.BlockRequest(id=user_id))
-            await event.reply(f"**🚫 تـم حـظرك نـهـائـياً بـواسطة {REBEL_NAME}.**")
-            del private_log[user_id]
-        except: pass
+            await event.reply(f"**🚫 تم حظرك تلقائياً لتجاوزك حد المحاولات وتكرار الإزعاج.**")
+            if user_id in private_log:
+                del private_log[user_id]
+        except:
+            pass
 
-# --- [ 3. أوامر الخصوصية الأصلية ] ---
+# تصفير العداد وإلغاء الرصد إذا قمت أنت بمراسلته أو الرد عليه
+@client.on(events.NewMessage(outgoing=True, func=lambda e: e.is_private))
+async def clear_user_log(event):
+    user_id = event.chat_id
+    if user_id in private_log:
+        del private_log[user_id]
 
-@client.on(events.NewMessage(outgoing=True, pattern=r"\.قفل_الحساب"))
+@client.on(events.NewMessage(outgoing=True, pattern=r"\.قفل الحساب"))
 async def hide_everything(event):
     await event.edit(f"**🛡️ جـاري تـفعيل وضـع الـشبح لـ {REBEL_NAME}...**")
     try:
